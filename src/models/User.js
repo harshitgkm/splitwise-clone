@@ -19,6 +19,9 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.ExpenseSplit, {
         foreignKey: 'user_id',
       });
+      User.hasMany(models.Comment, {
+        foreignKey: 'user_id',
+      });
     }
   }
   User.init(
