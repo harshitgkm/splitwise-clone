@@ -16,6 +16,9 @@ module.exports = (sequelize, DataTypes) => {
         through: models.GroupMember,
         foreignKey: 'user_id',
       });
+      User.hasMany(models.ExpenseSplit, {
+        foreignKey: 'user_id',
+      });
     }
   }
   User.init(
