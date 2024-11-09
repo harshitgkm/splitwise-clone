@@ -8,12 +8,17 @@ const {
   login,
 } = require('../controllers/auth.controller.js');
 
-router.post('/register', register);
+const {
+  validateRegister,
+  validateLogin,
+} = require('../validators/auth.validator');
+
+router.post('/register', validateRegister, register);
 
 router.post('/request-otp', requestOtp);
 
 router.post('/verify-otp', verifyOtp);
 
-router.post('/login', login);
+router.post('/login', validateLogin, login);
 
 module.exports = router;
