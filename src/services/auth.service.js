@@ -3,16 +3,23 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { generateOtp, verifyOtp, saveOtp } = require('../helpers/otp.helper.js');
 const sendOtpEmail = require('../helpers/mail.helper');
+require('dotenv').config();
 
-const generateToken = userId => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+const generateToken = email => {
+  console.log('JWT Secret:', process.env.JWT_SECRET);
+  return jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
-// Register User
 const registerUser = async (username, email) => {
   const user = new User({ username, email });
   await user.save();
   return 'User registered successfully';
+};
+
+const checkExistingUser = async email => {
+  const user = await User.findOne({ where: { email } });
+
+  return user ? true : false;
 };
 
 const requestOtpService = async email => {
@@ -32,4 +39,5 @@ module.exports = {
   registerUser,
   requestOtpService,
   validateOtp,
+  checkExistingUser,
 };

@@ -2,7 +2,9 @@ const {
   registerUser,
   validateOtp,
   requestOtpService,
+  checkExistingUser,
 } = require('../services/auth.service');
+const jwt = require('jsonwebtoken');
 
 let tempUserStore = {};
 
@@ -22,24 +24,45 @@ const register = async (req, res) => {
   }
 };
 
+const login = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const ifUserExist = await checkExistingUser(email);
+
+    if (ifUserExist) {
+      return res.json({ message: 'redirect to request-otp' });
+    }
+    res.json({ message: 'This user does not exist in DB' });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+};
+
 const requestOtp = async (req, res) => {
   const { email } = req.body;
 
   try {
-    // const user = await User.findOne({ email });
-    // if (!user) return res.status(404).json({ message: 'User not found' });
-    // Check if the user exists in the temporary store
+    // Check if the user exists in the temporary store (if they are in the process of registration)
     const userDetails = tempUserStore[email];
     if (!userDetails) {
-      return res
-        .status(404)
-        .json({ message: 'User not found. Please register first.' });
+      // If the user does not exist, check if they are already in the DB (login flow)
+      const userExists = await checkExistingUser(email);
+      if (!userExists) {
+        // If the user doesn't exist in DB, treat it as a registration process
+        return res
+          .status(404)
+          .json({ message: 'User not found. Please register first.' });
+      }
+      // If the user exists, it's a login, proceed with sending OTP
+      console.log('Sending OTP to:', email);
+      await requestOtpService(email);
+      return res.json({ message: 'OTP sent to your email for login' });
     }
-    // await requestOtpService(user._id, email);
+    // If the user details are in the temporary store, it's a registration process
     console.log('Sending OTP to:', email);
     await requestOtpService(email);
-    res.json({ message: 'OTP sent to your email' });
-    console.log('Otp sent');
+    res.json({ message: 'OTP sent to your email for registration' });
   } catch (error) {
     res.json({ error: error.message });
   }
@@ -52,33 +75,46 @@ const verifyOtp = async (req, res) => {
   );
 
   try {
-    // const user = await User.findOne({ email });
-    // if (!user) return res.status(404).json({ message: 'User not found' });
-    const userDetails = tempUserStore[email];
-    if (!userDetails) {
-      return res
-        .status(404)
-        .json({ message: 'User not found. Please register first.' });
+    const isValidOtp = await validateOtp(email, otp);
+    if (!isValidOtp) {
+      return res.status(400).json({ message: 'Invalid OTP' });
     }
 
-    // const isValidOtp = await validateOtp(user._id, otp);
-    const isValidOtp = await validateOtp(email, otp);
-    if (!isValidOtp) return res.status(400).json({ message: 'Invalid OTP' });
+    // Check if the user exists in the temporary store (i.e., it's a registration)
+    const userDetails = tempUserStore[email];
 
-    // const message = await registerUser(username, email);
+    if (userDetails) {
+      // Registration flow: create a new user
+      const message = await registerUser(
+        userDetails.username,
+        userDetails.email,
+      );
+      console.log(`User registered successfully: ${message}`);
 
-    const message = await registerUser(userDetails.username, userDetails.email);
-    console.log(`User registered successfully: ${message}`);
+      // Clear the temporary store after successful registration
+      delete tempUserStore[email];
 
-    // Clear the temporary store after successful registration
-    delete tempUserStore[email];
+      // Generate JWT token after registration
+      const token = jwt.sign(
+        { email: userDetails.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' },
+      );
 
-    console.log(message);
+      return res.json({ message: 'Registration successful', token });
+    }
 
-    res.json({ message: 'OTP verified successfully' });
+    // Login flow: If the user already exists, just send the login response
+    // User exists in the database (not in temp store), so it's a login flow
+    console.log('User logged in successfully');
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
+    res.json({ message: 'Login successful', token });
   } catch (error) {
     res.json({ error: error.message });
   }
 };
 
-module.exports = { register, requestOtp, verifyOtp };
+module.exports = { register, requestOtp, verifyOtp, login };
