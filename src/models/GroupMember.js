@@ -43,9 +43,9 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'GroupMember',
       paranoid: true,
-      timestamps: true,
+      modelName: 'GroupMember',
+      tableName: 'group_members',
       underscored: true,
     },
   );

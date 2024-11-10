@@ -57,14 +57,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      created_at: DataTypes.DATE,
-      updated_at: DataTypes.DATE,
     },
     {
       sequelize,
       paranoid: true,
       modelName: 'Group',
-      timestamps: true,
+      tableName: 'groups',
     },
   );
   return Group;
