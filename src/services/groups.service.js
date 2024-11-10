@@ -31,4 +31,27 @@ const getGroupsService = async userId => {
   });
 };
 
-module.exports = { createGroupService, getGroupsService };
+const updateGroupService = async (userId, groupId, groupData) => {
+  const { name, type, profile_image_url } = groupData;
+
+  const group = await Group.findByPk(groupId);
+
+  if (!group) {
+    throw new Error('Group not found');
+  }
+
+  // Check if the user is the group admin (created_by)
+  if (group.created_by !== userId) {
+    throw new Error('Only the group admin can update details');
+  }
+
+  // Update group details
+  group.name = name || group.name;
+  group.type = type || group.type;
+  group.profile_image_url = profile_image_url || group.profile_image_url;
+  await group.save();
+
+  return group;
+};
+
+module.exports = { createGroupService, getGroupsService, updateGroupService };
