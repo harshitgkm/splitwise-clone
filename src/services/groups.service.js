@@ -54,4 +54,27 @@ const updateGroupService = async (userId, groupId, groupData) => {
   return group;
 };
 
-module.exports = { createGroupService, getGroupsService, updateGroupService };
+const deleteGroupService = async (userId, groupId) => {
+  const group = await Group.findByPk(groupId);
+
+  if (!group) {
+    throw new Error('Group not found');
+  }
+
+  // Check if the user is the group admin (created_by)
+  if (group.created_by !== userId) {
+    throw new Error('Only the group admin can delete the group');
+  }
+
+  // Delete the group and its associated members, expenses, etc.
+  await group.destroy();
+
+  return group;
+};
+
+module.exports = {
+  createGroupService,
+  getGroupsService,
+  updateGroupService,
+  deleteGroupService,
+};

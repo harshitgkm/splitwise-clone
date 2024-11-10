@@ -2,6 +2,7 @@ const {
   createGroupService,
   getGroupsService,
   updateGroupService,
+  deleteGroupService,
 } = require('../services/groups.service.js');
 
 const createGroup = async (req, res) => {
@@ -43,7 +44,20 @@ const updateGroup = async (req, res) => {
     res.status(200).json({ message: 'Group updated successfully', group });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: error.message || 'Error updating group' });
+    res.json({ message: error.message || 'Error updating group' });
+  }
+};
+
+const deleteGroup = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { groupId } = req.params;
+
+    await deleteGroupService(userId, groupId);
+    res.status(200).json({ message: 'Group deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.json({ message: error.message || 'Error deleting group' });
   }
 };
 
@@ -51,4 +65,5 @@ module.exports = {
   createGroup,
   getGroups,
   updateGroup,
+  deleteGroup,
 };
