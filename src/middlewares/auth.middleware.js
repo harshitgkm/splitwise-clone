@@ -1,33 +1,34 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 require('dotenv').config();
+const { redisClient } = require('../config/redis.js');
 
 const verifyToken = async (req, res, next) => {
-  let token;
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    token = req.headers.authorization.split(' ')[1];
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'No token provided' });
   }
 
-  if (!token) {
-    return res
-      .status(401)
-      .json({ message: 'Access denied. No token provided' });
-  }
+  const token = authHeader.split(' ')[1];
 
   try {
+    // Check if the token is blacklisted in Redis
+    const isBlacklisted = await redisClient.get(token);
+    if (isBlacklisted) {
+      return res.json({ message: 'Token is invalid (blacklisted)' });
+    }
+
+    // If token is not blacklisted, verify the JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findOne({ where: { email: decoded.email } });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    req.user = user;
+    req.user = user; // Attach user to request object
     next();
   } catch (err) {
-    res.status(401).json({ message: 'Not authorized, token failed' });
-    console.log(err);
+    console.error(err);
+    res.json({ message: 'Not authorized, token failed' });
   }
 };
 
