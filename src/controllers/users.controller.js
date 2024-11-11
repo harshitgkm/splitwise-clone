@@ -1,8 +1,4 @@
-const {
-  getUserById,
-  updateUser,
-  logoutUser,
-} = require('../services/users.service');
+const { getUserById, updateUser } = require('../services/users.service');
 
 const getUserProfile = async (req, res) => {
   try {
@@ -27,19 +23,4 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
-const logout = async (req, res) => {
-  const token = req.headers.authorization.split(' ')[1];
-
-  if (!token) {
-    return res.json({ message: 'No token provided' });
-  }
-
-  try {
-    const result = await logoutUser(token);
-    res.json({ message: result.message });
-  } catch (error) {
-    res.json({ error: error.message });
-  }
-};
-
-module.exports = { getUserProfile, updateUserProfile, logout };
+module.exports = { getUserProfile, updateUserProfile };

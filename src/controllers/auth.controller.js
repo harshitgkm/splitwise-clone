@@ -3,6 +3,7 @@ const {
   validateOtp,
   requestOtpService,
   checkExistingUser,
+  logoutUser,
 } = require('../services/auth.service');
 const jwt = require('jsonwebtoken');
 
@@ -98,7 +99,7 @@ const verifyOtp = async (req, res) => {
       const token = jwt.sign(
         { email: userDetails.email },
         process.env.JWT_SECRET,
-        { expiresIn: '1h' },
+        { expiresIn: '20h' },
       );
 
       return res.json({ message: 'Registration successful', token });
@@ -117,4 +118,19 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-module.exports = { register, requestOtp, verifyOtp, login };
+const logout = async (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+
+  if (!token) {
+    return res.json({ message: 'No token provided' });
+  }
+
+  try {
+    const result = await logoutUser(token);
+    res.json({ message: result.message });
+  } catch (error) {
+    res.json({ error: error.message });
+  }
+};
+
+module.exports = { register, requestOtp, verifyOtp, login, logout };

@@ -6,7 +6,10 @@ const {
   requestOtp,
   verifyOtp,
   login,
+  logout,
 } = require('../controllers/auth.controller.js');
+
+const { verifyToken } = require('../middlewares/auth.middleware.js');
 
 const {
   validateRegister,
@@ -20,5 +23,7 @@ router.post('/request-otp', requestOtp);
 router.post('/verify-otp', verifyOtp);
 
 router.post('/login', validateLogin, login);
+
+router.post('/logout', verifyToken, logout);
 
 module.exports = router;
