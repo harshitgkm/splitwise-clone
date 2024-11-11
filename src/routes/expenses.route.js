@@ -6,6 +6,7 @@ const {
   getAllExpenses,
   getExpenseDetails,
   updateExpense,
+  deleteExpense,
 } = require('../controllers/expenses.controller.js');
 
 const {
@@ -20,5 +21,7 @@ router.get('/', verifyToken, checkUserInGroup, getAllExpenses);
 router.get('/:expenseId', verifyToken, checkUserInGroup, getExpenseDetails);
 
 router.put('/:expenseId', verifyToken, checkUserInGroup, updateExpense);
+
+router.delete('/:expenseId', verifyToken, checkUserInGroup, deleteExpense);
 
 module.exports = router;

@@ -3,6 +3,7 @@ const {
   getAllExpensesService,
   getExpenseDetailsService,
   updateExpenseService,
+  deleteExpenseService,
 } = require('../services/expenses.service.js');
 
 const createExpense = async (req, res) => {
@@ -61,9 +62,19 @@ const updateExpense = async (req, res) => {
   }
 };
 
+const deleteExpense = async (req, res) => {
+  try {
+    await deleteExpenseService(req.body.groupId, req.params.expenseId);
+    res.json({ message: 'Expense deleted successfully' });
+  } catch (error) {
+    res.json({ message: error.message });
+  }
+};
+
 module.exports = {
   createExpense,
   getAllExpenses,
   getExpenseDetails,
   updateExpense,
+  deleteExpense,
 };

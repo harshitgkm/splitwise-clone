@@ -51,9 +51,18 @@ const updateExpenseService = async (groupId, expenseId, data) => {
   return expense;
 };
 
+const deleteExpenseService = async (groupId, expenseId) => {
+  const expense = await Expense.findOne({
+    where: { group_id: groupId, id: expenseId },
+  });
+  if (!expense) throw new Error('Expense not found');
+  await expense.destroy();
+};
+
 module.exports = {
   createExpenseService,
   getAllExpensesService,
   getExpenseDetailsService,
   updateExpenseService,
+  deleteExpenseService,
 };
