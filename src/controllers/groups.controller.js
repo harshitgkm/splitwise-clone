@@ -3,6 +3,7 @@ const {
   getGroupsService,
   updateGroupService,
   deleteGroupService,
+  addGroupMember,
 } = require('../services/groups.service.js');
 
 const createGroup = async (req, res) => {
@@ -61,9 +62,32 @@ const deleteGroup = async (req, res) => {
   }
 };
 
+const addMemberToGroup = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { userId, isAdmin } = req.body; // `userId` is the ID of the user to add, `isAdmin` is optional
+    const currentUserId = req.user.id; // Current logged-in user from the token
+
+    // Call service function to add member
+    const result = await addGroupMember(
+      groupId,
+      currentUserId,
+      userId,
+      isAdmin,
+    );
+    res
+      .status(200)
+      .json({ message: 'User added to group successfully', data: result });
+  } catch (error) {
+    console.error(error);
+    res.json({ message: error.message || 'Error adding user to group' });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
   updateGroup,
   deleteGroup,
+  addMemberToGroup,
 };

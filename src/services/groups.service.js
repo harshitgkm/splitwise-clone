@@ -1,4 +1,4 @@
-const { Group, GroupMember } = require('../models');
+const { Group, GroupMember, User } = require('../models');
 
 const createGroupService = async (userId, groupData) => {
   const { name, type, profile_image_url } = groupData;
@@ -72,9 +72,55 @@ const deleteGroupService = async (userId, groupId) => {
   return group;
 };
 
+const addGroupMember = async (
+  groupId,
+  currentUserId,
+  userId,
+  isAdmin = false,
+) => {
+  // Check if the group exists
+  const group = await Group.findByPk(groupId);
+  if (!group) {
+    throw new Error('Group not found');
+  }
+
+  // Check if the current user is an admin in the group
+  const isCurrentUserAdmin = await GroupMember.findOne({
+    where: { group_id: groupId, user_id: currentUserId, is_admin: true },
+  });
+  if (!isCurrentUserAdmin) {
+    throw new Error('Only admins can add members to the group');
+  }
+
+  // Check if the user to be added exists
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Check if the user is already a member of the group
+  const existingMember = await GroupMember.findOne({
+    where: { group_id: groupId, user_id: userId },
+  });
+  if (existingMember) {
+    throw new Error('User is already a member of the group');
+  }
+
+  // Add the user to the group
+  const newMember = await GroupMember.create({
+    group_id: groupId,
+    user_id: userId,
+    is_admin: isAdmin,
+    joined_at: new Date(),
+  });
+
+  return newMember;
+};
+
 module.exports = {
   createGroupService,
   getGroupsService,
   updateGroupService,
   deleteGroupService,
+  addGroupMember,
 };
