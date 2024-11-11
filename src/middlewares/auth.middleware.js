@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, GroupMember } = require('../models');
 require('dotenv').config();
 const { redisClient } = require('../config/redis.js');
 
@@ -32,4 +32,12 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken };
+const checkUserInGroup = async (req, res, next) => {
+  const userInGroup = await GroupMember.findOne({
+    where: { user_id: req.user.id, group_id: req.body.groupId },
+  });
+  if (!userInGroup) return res.json({ message: 'User not in this group' });
+  next();
+};
+
+module.exports = { verifyToken, checkUserInGroup };
