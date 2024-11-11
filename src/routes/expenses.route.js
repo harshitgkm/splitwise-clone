@@ -5,6 +5,7 @@ const {
   createExpense,
   getAllExpenses,
   getExpenseDetails,
+  updateExpense,
 } = require('../controllers/expenses.controller.js');
 
 const {
@@ -17,5 +18,7 @@ router.post('/', verifyToken, checkUserInGroup, createExpense);
 router.get('/', verifyToken, checkUserInGroup, getAllExpenses);
 
 router.get('/:expenseId', verifyToken, checkUserInGroup, getExpenseDetails);
+
+router.put('/:expenseId', verifyToken, checkUserInGroup, updateExpense);
 
 module.exports = router;

@@ -36,8 +36,24 @@ const getExpenseDetailsService = async (groupId, expenseId) => {
   return expense;
 };
 
+const updateExpenseService = async (groupId, expenseId, data) => {
+  const expense = await Expense.findOne({
+    where: { group_id: groupId, id: expenseId },
+  });
+  if (!expense) throw new Error('Expense not found');
+
+  expense.description = data.description || expense.description;
+  expense.amount = data.amount || expense.amount;
+  expense.expense_image_url =
+    data.expense_image_url || expense.expense_image_url;
+  await expense.save();
+
+  return expense;
+};
+
 module.exports = {
   createExpenseService,
   getAllExpensesService,
   getExpenseDetailsService,
+  updateExpenseService,
 };
