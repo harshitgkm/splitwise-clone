@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   createExpense,
   getAllExpenses,
+  getExpenseDetails,
 } = require('../controllers/expenses.controller.js');
 
 const {
@@ -13,6 +14,8 @@ const {
 
 router.post('/', verifyToken, checkUserInGroup, createExpense);
 
-router.get('/', verifyToken, getAllExpenses);
+router.get('/', verifyToken, checkUserInGroup, getAllExpenses);
+
+router.get('/:expenseId', verifyToken, checkUserInGroup, getExpenseDetails);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const {
   createExpenseService,
   getAllExpensesService,
+  getExpenseDetailsService,
 } = require('../services/expenses.service.js');
 
 const createExpense = async (req, res) => {
@@ -33,4 +34,16 @@ const getAllExpenses = async (req, res) => {
   }
 };
 
-module.exports = { createExpense, getAllExpenses };
+const getExpenseDetails = async (req, res) => {
+  try {
+    const expense = await getExpenseDetailsService(
+      req.body.groupId,
+      req.params.expenseId,
+    );
+    res.status(200).json(expense);
+  } catch (error) {
+    res.json({ message: error.message });
+  }
+};
+
+module.exports = { createExpense, getAllExpenses, getExpenseDetails };

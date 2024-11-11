@@ -28,4 +28,16 @@ const getAllExpensesService = async groupId => {
   return expenses;
 };
 
-module.exports = { createExpenseService, getAllExpensesService };
+const getExpenseDetailsService = async (groupId, expenseId) => {
+  const expense = await Expense.findOne({
+    where: { group_id: groupId, id: expenseId },
+  });
+  if (!expense) throw new Error('Expense not found');
+  return expense;
+};
+
+module.exports = {
+  createExpenseService,
+  getAllExpensesService,
+  getExpenseDetailsService,
+};
