@@ -8,7 +8,7 @@ const {
 
 const createExpense = async (req, res) => {
   console.log('dfdf');
-  const { groupId, amount, description, splitType } = req.body;
+  const { groupId, amount, description, splitType, users } = req.body;
   const payerId = req.user.id;
 
   console.log(groupId, amount, description, splitType);
@@ -20,6 +20,7 @@ const createExpense = async (req, res) => {
       amount,
       description,
       splitType,
+      users,
     );
     res.status(201).json(expense);
   } catch (error) {
