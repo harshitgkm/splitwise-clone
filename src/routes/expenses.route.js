@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 
-const { createExpense } = require('../controllers/expenses.controller.js');
+const {
+  createExpense,
+  getAllExpenses,
+} = require('../controllers/expenses.controller.js');
 
 const {
   verifyToken,
@@ -9,5 +12,7 @@ const {
 } = require('../middlewares/auth.middleware.js');
 
 router.post('/', verifyToken, checkUserInGroup, createExpense);
+
+router.get('/', verifyToken, getAllExpenses);
 
 module.exports = router;

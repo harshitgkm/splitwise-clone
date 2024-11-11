@@ -23,4 +23,9 @@ const createExpenseService = async (
   return expense;
 };
 
-module.exports = { createExpenseService };
+const getAllExpensesService = async groupId => {
+  const expenses = await Expense.findAll({ where: { group_id: groupId } });
+  return expenses;
+};
+
+module.exports = { createExpenseService, getAllExpensesService };
