@@ -27,6 +27,8 @@ const createExpenseService = async (
   if (splitType === 'EQUALLY') {
     // Split equally among all group members
     const groupUsers = await group.getUsers(); // Fetch all users in the group
+    console.log(groupUsers);
+    console.log(groupUsers.length);
     const share = amount / groupUsers.length;
 
     for (const user of groupUsers) {
@@ -138,10 +140,44 @@ const deleteExpenseService = async (groupId, expenseId) => {
   await expense.destroy();
 };
 
+const settleUpService = async (payerId, payeeId, amount, expenseId) => {
+  const payerExpense = await ExpenseSplit.findOne({
+    where: { user_id: payerId, expense_id: expenseId },
+  });
+
+  const payeeExpense = await ExpenseSplit.findOne({
+    where: { user_id: payeeId, expense_id: expenseId },
+  });
+
+  if (!payerExpense || !payeeExpense) {
+    throw new Error('User balances not found for settlement.');
+  }
+
+  // Calculate new balances after settlement
+  let newPayerBalance = parseFloat(payerExpense.amount_owed) - amount;
+
+  if (newPayerBalance < 0) {
+    throw new Error('Insufficient balance for settlement.');
+  }
+
+  // Update the payer's and payee's records in ExpenseSplit
+  await ExpenseSplit.update(
+    { amount_owed: newPayerBalance },
+    { where: { user_id: payerId } },
+  );
+
+  return {
+    payerId,
+    payeeId,
+    newPayerBalance,
+  };
+};
+
 module.exports = {
   createExpenseService,
   getAllExpensesService,
   getExpenseDetailsService,
   updateExpenseService,
   deleteExpenseService,
+  settleUpService,
 };

@@ -7,6 +7,7 @@ const {
   getExpenseDetails,
   updateExpense,
   deleteExpense,
+  settleUpExpense,
 } = require('../controllers/expenses.controller.js');
 
 const {
@@ -23,5 +24,7 @@ router.get('/:expenseId', verifyToken, checkUserInGroup, getExpenseDetails);
 router.put('/:expenseId', verifyToken, checkUserInGroup, updateExpense);
 
 router.delete('/:expenseId', verifyToken, checkUserInGroup, deleteExpense);
+
+router.post('/:expenseId/settle-up', verifyToken, settleUpExpense);
 
 module.exports = router;

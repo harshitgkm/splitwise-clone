@@ -4,6 +4,7 @@ const {
   getExpenseDetailsService,
   updateExpenseService,
   deleteExpenseService,
+  settleUpService,
 } = require('../services/expenses.service.js');
 
 const createExpense = async (req, res) => {
@@ -72,10 +73,26 @@ const deleteExpense = async (req, res) => {
   }
 };
 
+const settleUpExpense = async (req, res) => {
+  const { payerId, payeeId, amount } = req.body;
+  const expenseId = req.params;
+
+  try {
+    const result = await settleUpService(payerId, payeeId, amount, expenseId);
+    res.status(200).json({
+      message: 'Settle up successful',
+      data: result,
+    });
+  } catch (error) {
+    res.json({ message: error.message });
+  }
+};
+
 module.exports = {
   createExpense,
   getAllExpenses,
   getExpenseDetails,
   updateExpense,
   deleteExpense,
+  settleUpExpense,
 };
