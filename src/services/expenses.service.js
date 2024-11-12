@@ -21,12 +21,10 @@ const createExpenseService = async (
     split_type: splitType,
   });
 
-  // Create entries in the ExpenseSplit table based on the split type
   let totalAmountPaid = 0; // To ensure that the total amount paid matches the expense amount
 
   if (splitType === 'EQUALLY') {
-    // Split equally among all group members
-    const groupUsers = await group.getUsers(); // Fetch all users in the group
+    const groupUsers = await group.getUsers();
     console.log(groupUsers);
     console.log(groupUsers.length);
     const share = amount / groupUsers.length;
@@ -43,12 +41,10 @@ const createExpenseService = async (
       });
     }
   } else if (splitType === 'UNEQUAL') {
-    // Unequal split: user needs to specify how much each one pays
     for (const user of users) {
       const { userId, amountPaid, amountOwed } = user;
       totalAmountPaid += amountPaid;
 
-      // Create ExpenseSplit for each user with their specified amount paid and owed
       await ExpenseSplit.create({
         expense_id: expense.id,
         user_id: userId,
@@ -58,11 +54,10 @@ const createExpenseService = async (
       });
     }
   } else if (splitType === 'PERCENTAGE') {
-    // Percentage-based split: Each user pays a certain percentage of the total amount
     for (const user of users) {
       const { userId, percentage } = user;
       const amountPaid = (percentage / 100) * amount;
-      const amountOwed = amount - amountPaid; // The rest is owed
+      const amountOwed = amount - amountPaid;
 
       totalAmountPaid += amountPaid;
 
@@ -70,12 +65,11 @@ const createExpenseService = async (
         expense_id: expense.id,
         user_id: userId,
         amount_paid: amountPaid,
-        split_ratio: (percentage / 100) * 100, // 100% split for each user
+        split_ratio: (percentage / 100) * 100,
         amount_owed: amountOwed,
       });
     }
   } else if (splitType === 'SHARES') {
-    // Shares-based split: Users specify how many shares they should pay
     const totalShares = users.reduce((acc, user) => acc + user.shares, 0);
     const shareValue = amount / totalShares;
 
@@ -96,7 +90,7 @@ const createExpenseService = async (
     }
   }
 
-  // Validate if total amount paid matches the actual expense amount
+  // check if total amount paid matches the actual expense amount
   if (totalAmountPaid !== amount) {
     throw new Error('The total amount paid does not match the expense amount.');
   }
@@ -153,14 +147,13 @@ const settleUpService = async (payerId, payeeId, amount, expenseId) => {
     throw new Error('User balances not found for settlement.');
   }
 
-  // Calculate new balances after settlement
+  // new balances after settlement
   let newPayerBalance = parseFloat(payerExpense.amount_owed) - amount;
 
   if (newPayerBalance < 0) {
     throw new Error('Insufficient balance for settlement.');
   }
 
-  // Update the payer's and payee's records in ExpenseSplit
   await ExpenseSplit.update(
     { amount_owed: newPayerBalance },
     { where: { user_id: payerId } },
