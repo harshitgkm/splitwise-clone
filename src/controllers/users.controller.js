@@ -1,9 +1,13 @@
-const { getUserById, updateUser } = require('../services/users.service');
+const {
+  getUserById,
+  updateUser,
+  calculateOutstandingBalance,
+} = require('../services/users.service');
 
 const getUserProfile = async (req, res) => {
   try {
     console.log('hello');
-    const userId = req.user.id; // Use authenticated user's ID from JWT
+    const userId = req.user.id;
     const user = await getUserById(userId);
     res.json(user);
     console.log('after try of getUserProfile');
@@ -23,4 +27,15 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
-module.exports = { getUserProfile, updateUserProfile };
+const getOutstandingBalance = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const balance = await calculateOutstandingBalance(userId);
+    res.status(200).json({ outstandingBalance: balance });
+  } catch (error) {
+    console.log(error);
+    res.json({ error: 'Failed to fetch outstanding balance.' });
+  }
+};
+
+module.exports = { getUserProfile, updateUserProfile, getOutstandingBalance };

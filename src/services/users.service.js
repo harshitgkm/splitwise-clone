@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, ExpenseSplit } = require('../models');
 require('dotenv').config();
 
 const getUserById = async userId => {
@@ -18,4 +18,16 @@ const updateUser = async (userId, updatedData) => {
   });
 };
 
-module.exports = { getUserById, updateUser };
+const calculateOutstandingBalance = async userId => {
+  const expenseSplits = await ExpenseSplit.findAll({
+    where: { user_id: userId },
+  });
+
+  const outstandingBalance = expenseSplits.reduce(
+    (acc, split) => acc + (split.amount_owed - split.amount_paid),
+    0,
+  );
+  return outstandingBalance;
+};
+
+module.exports = { getUserById, updateUser, calculateOutstandingBalance };

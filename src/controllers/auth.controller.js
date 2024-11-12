@@ -85,7 +85,6 @@ const verifyOtp = async (req, res) => {
     const userDetails = tempUserStore[email];
 
     if (userDetails) {
-      // Registration flow: create a new user
       const message = await registerUser(
         userDetails.username,
         userDetails.email,
@@ -95,7 +94,7 @@ const verifyOtp = async (req, res) => {
       // Clear the temporary store after successful registration
       delete tempUserStore[email];
 
-      // Generate JWT token after registration
+      // Generate Token after registration
       const token = jwt.sign(
         { email: userDetails.email },
         process.env.JWT_SECRET,

@@ -9,7 +9,7 @@ const {
 const createGroup = async (req, res) => {
   try {
     const groupData = req.body;
-    const userId = req.user.id; //User from the JWT token
+    const userId = req.user.id;
 
     const group = await createGroupService(userId, groupData);
 
@@ -66,9 +66,8 @@ const addMemberToGroup = async (req, res) => {
   try {
     const { groupId } = req.params;
     const { userId, isAdmin } = req.body; // `userId` is the ID of the user to add, `isAdmin` is optional
-    const currentUserId = req.user.id; // Current logged-in user from the token
+    const currentUserId = req.user.id;
 
-    // Call service function to add member
     const result = await addGroupMember(
       groupId,
       currentUserId,
