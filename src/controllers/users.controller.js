@@ -2,6 +2,7 @@ const {
   getUserById,
   updateUser,
   calculateOutstandingBalance,
+  addFriendService,
 } = require('../services/users.service');
 
 const getUserProfile = async (req, res) => {
@@ -38,4 +39,31 @@ const getOutstandingBalance = async (req, res) => {
   }
 };
 
-module.exports = { getUserProfile, updateUserProfile, getOutstandingBalance };
+const addFriend = async (req, res) => {
+  const userId = req.user.id;
+  const { friend_two } = req.body;
+
+  console.log('hello');
+
+  if (!friend_two || userId === friend_two) {
+    return res.status(400).json({ message: 'Invalid friend IDs provided' });
+  }
+
+  try {
+    const newFriendship = await addFriendService(userId, friend_two);
+    res.status(201).json({
+      message: 'Friend added successfully',
+      friendship: newFriendship,
+    });
+  } catch (error) {
+    console.error('Error adding friend:', error);
+    res.json({ error: error.message });
+  }
+};
+
+module.exports = {
+  getUserProfile,
+  updateUserProfile,
+  getOutstandingBalance,
+  addFriend,
+};

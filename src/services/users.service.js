@@ -1,4 +1,4 @@
-const { User, ExpenseSplit } = require('../models');
+const { User, ExpenseSplit, FriendList } = require('../models');
 require('dotenv').config();
 
 const getUserById = async userId => {
@@ -30,4 +30,17 @@ const calculateOutstandingBalance = async userId => {
   return outstandingBalance;
 };
 
-module.exports = { getUserById, updateUser, calculateOutstandingBalance };
+const addFriendService = async (friend_one, friend_two) => {
+  console.log('friend_one:', friend_one);
+  console.log('friend_two:', friend_two);
+
+  const newFriendship = await FriendList.create({ friend_one, friend_two });
+  return newFriendship;
+};
+
+module.exports = {
+  getUserById,
+  updateUser,
+  calculateOutstandingBalance,
+  addFriendService,
+};
