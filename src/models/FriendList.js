@@ -10,9 +10,11 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       FriendList.belongsTo(models.User, {
         foreignKey: 'friend_one',
+        as: 'friend_one_details',
       });
       FriendList.belongsTo(models.User, {
         foreignKey: 'friend_two',
+        as: 'friend_two_details',
       });
     }
   }
@@ -27,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         type: DataTypes.UUID,
         references: {
-          model: 'User',
+          model: 'users',
           key: 'id',
         },
       },
@@ -35,7 +37,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         type: DataTypes.UUID,
         references: {
-          model: 'User',
+          model: 'users',
           key: 'id',
         },
       },

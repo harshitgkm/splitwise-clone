@@ -3,6 +3,7 @@ const {
   updateUser,
   calculateOutstandingBalance,
   addFriendService,
+  getFriends,
 } = require('../services/users.service');
 
 const getUserProfile = async (req, res) => {
@@ -61,9 +62,24 @@ const addFriend = async (req, res) => {
   }
 };
 
+const getFriendsList = async (req, res) => {
+  const userId = req.user.id;
+  console.log(userId);
+
+  try {
+    const friendsList = await getFriends(userId);
+    console.log(friendsList);
+    res.status(200).json({ friends: friendsList });
+  } catch (err) {
+    console.error(err);
+    res.json({ error: err.message });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
   getOutstandingBalance,
   addFriend,
+  getFriendsList,
 };

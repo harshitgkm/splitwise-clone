@@ -1,5 +1,6 @@
 const { User, ExpenseSplit, FriendList } = require('../models');
 require('dotenv').config();
+const Op = require('sequelize');
 
 const getUserById = async userId => {
   console.log('Fetching user by ID');
@@ -38,9 +39,31 @@ const addFriendService = async (friend_one, friend_two) => {
   return newFriendship;
 };
 
+const getFriends = async userId => {
+  console.log('User id => ', typeof userId);
+  let friend = await FriendList.findAll({
+    where: Op.or(
+      Op.literal(`"friend_one" = CAST('${userId}' AS UUID)`),
+      Op.literal(`"friend_two" = CAST('${userId}' AS UUID)`),
+    ),
+    include: [
+      {
+        model: User,
+        as: 'friend_one_details',
+      },
+      {
+        model: User,
+        as: 'friend_two_details',
+      },
+    ],
+  });
+  return friend;
+};
+
 module.exports = {
   getUserById,
   updateUser,
   calculateOutstandingBalance,
   addFriendService,
+  getFriends,
 };
