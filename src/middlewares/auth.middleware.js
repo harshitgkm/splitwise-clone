@@ -12,7 +12,6 @@ const verifyToken = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    // Check if the token is blacklisted in Redis
     const isBlacklisted = await redisClient.get(token);
     if (isBlacklisted) {
       return res.json({ message: 'Token is invalid (blacklisted)' });
@@ -24,7 +23,7 @@ const verifyToken = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    req.user = user; // Attach user to request object
+    req.user = user;
     next();
   } catch (err) {
     console.error(err);
@@ -40,4 +39,33 @@ const checkUserInGroup = async (req, res, next) => {
   next();
 };
 
-module.exports = { verifyToken, checkUserInGroup };
+const checkGroupAdmin = async (req, res, next) => {
+  const userId = req.user.id;
+  const groupId = req.params.groupId;
+
+  try {
+    const groupMember = await GroupMember.findOne({
+      where: {
+        user_id: userId,
+        group_id: groupId,
+        is_admin: true,
+      },
+    });
+
+    if (!groupMember) {
+      return res.status(403).json({
+        message: 'Access denied. Only group admin can perform this action.',
+      });
+    }
+
+    next();
+  } catch (error) {
+    res.json({ error: error.message });
+  }
+};
+
+module.exports = {
+  verifyToken,
+  checkUserInGroup,
+  checkGroupAdmin,
+};

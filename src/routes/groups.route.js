@@ -9,16 +9,24 @@ const {
   addMemberToGroup,
 } = require('../controllers/groups.controller.js');
 
-const { verifyToken } = require('../middlewares/auth.middleware.js');
+const {
+  verifyToken,
+  checkGroupAdmin,
+} = require('../middlewares/auth.middleware.js');
 
 router.post('/', verifyToken, createGroup);
 
 router.get('/', verifyToken, getGroups);
 
-router.put('/:groupId', verifyToken, updateGroup);
+router.put('/:groupId', verifyToken, checkGroupAdmin, updateGroup);
 
-router.delete('/:groupId', verifyToken, deleteGroup);
+router.delete('/:groupId', verifyToken, checkGroupAdmin, deleteGroup);
 
-router.post('/:groupId/addMember', verifyToken, addMemberToGroup);
+router.post(
+  '/:groupId/addMember',
+  verifyToken,
+  checkGroupAdmin,
+  addMemberToGroup,
+);
 
 module.exports = router;

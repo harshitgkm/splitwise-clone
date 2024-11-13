@@ -44,13 +44,10 @@ const requestOtp = async (req, res) => {
   const { email } = req.body;
 
   try {
-    // Check if the user exists in the temporary store (if they are in the process of registration)
     const userDetails = tempUserStore[email];
     if (!userDetails) {
-      // If the user does not exist, check if they are already in the DB (login flow)
       const userExists = await checkExistingUser(email);
       if (!userExists) {
-        // If the user doesn't exist in DB, treat it as a registration process
         return res
           .status(404)
           .json({ message: 'User not found. Please register first.' });
@@ -60,7 +57,6 @@ const requestOtp = async (req, res) => {
       await requestOtpService(email);
       return res.json({ message: 'OTP sent to your email for login' });
     }
-    // If the user details are in the temporary store, it's a registration process
     console.log('Sending OTP to:', email);
     await requestOtpService(email);
     res.json({ message: 'OTP sent to your email for registration' });
@@ -81,7 +77,6 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
 
-    // Check if the user exists in the temporary store (i.e., it's a registration)
     const userDetails = tempUserStore[email];
 
     if (userDetails) {
@@ -91,10 +86,8 @@ const verifyOtp = async (req, res) => {
       );
       console.log(`User registered successfully: ${message}`);
 
-      // Clear the temporary store after successful registration
       delete tempUserStore[email];
 
-      // Generate Token after registration
       const token = jwt.sign(
         { email: userDetails.email },
         process.env.JWT_SECRET,
@@ -104,11 +97,9 @@ const verifyOtp = async (req, res) => {
       return res.json({ message: 'Registration successful', token });
     }
 
-    // Login flow: If the user already exists, just send the login response
-    // User exists in the database (not in temp store), so it's a login flow
     console.log('User logged in successfully');
     const token = jwt.sign({ email }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
+      expiresIn: '20h',
     });
 
     res.json({ message: 'Login successful', token });
