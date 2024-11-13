@@ -1,4 +1,4 @@
-const { Group, Expense, ExpenseSplit, Comment } = require('../models');
+const { Group, Expense, ExpenseSplit, Comment, User } = require('../models');
 
 const createExpenseService = async (
   groupId,
@@ -174,6 +174,14 @@ const createCommentService = async ({ expenseId, userId, comment }) => {
   });
 };
 
+const getCommentsService = async expenseId => {
+  return await Comment.findAll({
+    where: { expense_id: expenseId },
+    include: [{ model: User, attributes: ['username', 'profile_picture_url'] }],
+    order: [['created_at', 'ASC']],
+  });
+};
+
 module.exports = {
   createExpenseService,
   getAllExpensesService,
@@ -182,4 +190,5 @@ module.exports = {
   deleteExpenseService,
   settleUpService,
   createCommentService,
+  getCommentsService,
 };

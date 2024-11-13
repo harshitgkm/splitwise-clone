@@ -9,6 +9,7 @@ const {
   deleteExpense,
   settleUpExpense,
   createComment,
+  getCommentsByExpense,
 } = require('../controllers/expenses.controller.js');
 
 const {
@@ -29,5 +30,7 @@ router.delete('/:expenseId', verifyToken, checkUserInGroup, deleteExpense);
 router.post('/:expenseId/settle-up', verifyToken, settleUpExpense);
 
 router.post('/:expenseId/comments', verifyToken, createComment);
+
+router.get('/:expenseId/comments', verifyToken, getCommentsByExpense);
 
 module.exports = router;
