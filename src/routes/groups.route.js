@@ -14,11 +14,19 @@ const {
   checkGroupAdmin,
 } = require('../middlewares/auth.middleware.js');
 
+const upload = require('../middlewares/multer.middleware.js');
+
 router.post('/', verifyToken, createGroup);
 
 router.get('/', verifyToken, getGroups);
 
-router.put('/:groupId', verifyToken, checkGroupAdmin, updateGroup);
+router.put(
+  '/:groupId',
+  verifyToken,
+  checkGroupAdmin,
+  upload.single('group_profile_url'),
+  updateGroup,
+);
 
 router.delete('/:groupId', verifyToken, checkGroupAdmin, deleteGroup);
 

@@ -6,6 +6,8 @@ const {
   addGroupMember,
 } = require('../services/groups.service.js');
 
+const { uploadFileToS3 } = require('../helpers/aws.helper.js');
+
 const createGroup = async (req, res) => {
   try {
     const groupData = req.body;
@@ -40,6 +42,14 @@ const updateGroup = async (req, res) => {
     const userId = req.user.id;
     const { groupId } = req.params;
     const groupData = req.body;
+
+    if (req.url) {
+      console.log(req.url);
+
+      const image = await uploadFileToS3(req.url);
+      console.log(image);
+      groupData.profile_image_url = image;
+    }
 
     const group = await updateGroupService(userId, groupId, groupData);
     res.status(200).json({ message: 'Group updated successfully', group });
