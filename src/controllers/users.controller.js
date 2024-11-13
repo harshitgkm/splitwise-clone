@@ -6,6 +6,8 @@ const {
   getFriends,
 } = require('../services/users.service');
 
+const { uploadFileToS3 } = require('../helpers/aws.helper.js');
+
 const getUserProfile = async (req, res) => {
   try {
     console.log('hello');
@@ -22,6 +24,16 @@ const updateUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const updatedData = req.body;
+
+    if (req.file) {
+      console.log('File uploaded:', req.file);
+
+      const imageUrl = await uploadFileToS3(req.file);
+      console.log('imageUrl', imageUrl);
+      updatedData.profile_picture_url = imageUrl;
+    }
+
+    console.log(req.file);
     const updatedUser = await updateUser(userId, updatedData);
     res.json(updatedUser);
   } catch (error) {

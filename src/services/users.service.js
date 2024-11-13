@@ -10,6 +10,7 @@ const getUserById = async userId => {
 };
 
 const updateUser = async (userId, updatedData) => {
+  console.log('updated-user-data', updatedData);
   await User.update(updatedData, {
     where: { id: userId },
   });
