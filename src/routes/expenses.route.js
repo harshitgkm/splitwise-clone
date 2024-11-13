@@ -8,6 +8,7 @@ const {
   updateExpense,
   deleteExpense,
   settleUpExpense,
+  createComment,
 } = require('../controllers/expenses.controller.js');
 
 const {
@@ -26,5 +27,7 @@ router.put('/:expenseId', verifyToken, checkUserInGroup, updateExpense);
 router.delete('/:expenseId', verifyToken, checkUserInGroup, deleteExpense);
 
 router.post('/:expenseId/settle-up', verifyToken, settleUpExpense);
+
+router.post('/:expenseId/comments', verifyToken, createComment);
 
 module.exports = router;

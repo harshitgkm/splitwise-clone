@@ -1,4 +1,4 @@
-const { Group, Expense, ExpenseSplit } = require('../models');
+const { Group, Expense, ExpenseSplit, Comment } = require('../models');
 
 const createExpenseService = async (
   groupId,
@@ -166,6 +166,14 @@ const settleUpService = async (payerId, payeeId, amount, expenseId) => {
   };
 };
 
+const createCommentService = async ({ expenseId, userId, comment }) => {
+  return await Comment.create({
+    expense_id: expenseId,
+    user_id: userId,
+    comment,
+  });
+};
+
 module.exports = {
   createExpenseService,
   getAllExpensesService,
@@ -173,4 +181,5 @@ module.exports = {
   updateExpenseService,
   deleteExpenseService,
   settleUpService,
+  createCommentService,
 };
