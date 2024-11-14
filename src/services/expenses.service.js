@@ -192,6 +192,14 @@ const updateCommentService = async (commentId, newCommentText) => {
   return comment;
 };
 
+const deleteCommentService = async commentId => {
+  const comment = await Comment.findByPk(commentId);
+  if (!comment) {
+    throw new Error('Comment not found');
+  }
+  await comment.destroy();
+};
+
 module.exports = {
   createExpenseService,
   getAllExpensesService,
@@ -202,4 +210,5 @@ module.exports = {
   createCommentService,
   getCommentsService,
   updateCommentService,
+  deleteCommentService,
 };

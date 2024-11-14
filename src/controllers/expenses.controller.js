@@ -8,6 +8,7 @@ const {
   createCommentService,
   getCommentsService,
   updateCommentService,
+  deleteCommentService,
 } = require('../services/expenses.service.js');
 
 const createExpense = async (req, res) => {
@@ -134,6 +135,20 @@ const updateComment = async (req, res) => {
   }
 };
 
+const deleteComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;
+
+    await deleteCommentService(commentId);
+
+    res
+      .status(200)
+      .json({ success: true, message: 'Comment deleted successfully' });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createExpense,
   getAllExpenses,
@@ -144,4 +159,5 @@ module.exports = {
   createComment,
   getCommentsByExpense,
   updateComment,
+  deleteComment,
 };
