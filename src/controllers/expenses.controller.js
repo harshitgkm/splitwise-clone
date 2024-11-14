@@ -73,16 +73,25 @@ const deleteExpense = async (req, res) => {
 };
 
 const settleUpExpense = async (req, res) => {
-  const { payerId, payeeId, amount } = req.body;
-  const expenseId = req.query;
+  const { payerId, payeeId, amount, groupId } = req.body;
+  console.log(payerId, payeeId, amount);
+  const expenseId = req.params.expenseId;
+  console.log(expenseId);
 
   try {
-    const result = await settleUpService(payerId, payeeId, amount, expenseId);
+    const result = await settleUpService(
+      payerId,
+      payeeId,
+      amount,
+      expenseId,
+      groupId,
+    );
     res.status(200).json({
       message: 'Settle up successful',
       data: result,
     });
   } catch (error) {
+    console.log(error);
     res.json({ message: error.message });
   }
 };

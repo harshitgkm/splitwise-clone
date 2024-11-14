@@ -1,4 +1,11 @@
-const { Group, Expense, ExpenseSplit, Comment, User } = require('../models');
+const {
+  Group,
+  Expense,
+  ExpenseSplit,
+  Comment,
+  User,
+  Payment,
+} = require('../models');
 
 const createExpenseService = async (
   groupId,
@@ -134,10 +141,18 @@ const deleteExpenseService = async expenseId => {
   await expense.destroy();
 };
 
-const settleUpService = async (payerId, payeeId, amount, expenseId) => {
+const settleUpService = async (
+  payerId,
+  payeeId,
+  amount,
+  expenseId,
+  groupId,
+) => {
   const payerExpense = await ExpenseSplit.findOne({
     where: { user_id: payerId, expense_id: expenseId },
   });
+
+  console.log(payerExpense);
 
   const payeeExpense = await ExpenseSplit.findOne({
     where: { user_id: payeeId, expense_id: expenseId },
@@ -150,19 +165,29 @@ const settleUpService = async (payerId, payeeId, amount, expenseId) => {
   // new balances after settlement
   let newPayerBalance = parseFloat(payerExpense.amount_owed) - amount;
 
-  if (newPayerBalance < 0) {
-    throw new Error('Insufficient balance for settlement.');
-  }
+  // if (newPayerBalance < 0) {
+  //   throw new Error('Insufficient balance for settlement.');
+  // }
 
   await ExpenseSplit.update(
     { amount_owed: newPayerBalance },
     { where: { user_id: payerId } },
   );
 
+  console.log('group id in console: ', groupId);
+
+  const payment = await Payment.create({
+    payer_id: payerId,
+    payee_id: payeeId,
+    amount,
+    group_id: groupId,
+  });
+
   return {
     payerId,
     payeeId,
     newPayerBalance,
+    payment,
   };
 };
 
