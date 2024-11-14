@@ -7,6 +7,7 @@ const {
   settleUpService,
   createCommentService,
   getCommentsService,
+  updateCommentService,
 } = require('../services/expenses.service.js');
 
 const createExpense = async (req, res) => {
@@ -120,6 +121,19 @@ const getCommentsByExpense = async (req, res) => {
   }
 };
 
+const updateComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const { comment } = req.body;
+
+    const updatedComment = await updateCommentService(commentId, comment);
+
+    res.status(200).json({ success: true, data: updatedComment });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createExpense,
   getAllExpenses,
@@ -129,4 +143,5 @@ module.exports = {
   settleUpExpense,
   createComment,
   getCommentsByExpense,
+  updateComment,
 };

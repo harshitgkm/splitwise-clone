@@ -182,6 +182,16 @@ const getCommentsService = async expenseId => {
   });
 };
 
+const updateCommentService = async (commentId, newCommentText) => {
+  const comment = await Comment.findByPk(commentId);
+  if (!comment) {
+    throw new Error('Comment not found');
+  }
+  comment.comment = newCommentText;
+  await comment.save();
+  return comment;
+};
+
 module.exports = {
   createExpenseService,
   getAllExpensesService,
@@ -191,4 +201,5 @@ module.exports = {
   settleUpService,
   createCommentService,
   getCommentsService,
+  updateCommentService,
 };

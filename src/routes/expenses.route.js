@@ -10,6 +10,7 @@ const {
   settleUpExpense,
   createComment,
   getCommentsByExpense,
+  updateComment,
 } = require('../controllers/expenses.controller.js');
 
 const {
@@ -32,5 +33,7 @@ router.post('/:expenseId/settle-up', verifyToken, settleUpExpense);
 router.post('/:expenseId/comments', verifyToken, createComment);
 
 router.get('/:expenseId/comments', verifyToken, getCommentsByExpense);
+
+router.put('/:expenseId/comments/:commentId', verifyToken, updateComment);
 
 module.exports = router;
