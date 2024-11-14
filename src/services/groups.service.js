@@ -91,10 +91,24 @@ const addGroupMember = async (
   return newMember;
 };
 
+const leaveGroupService = async (userId, groupId) => {
+  const groupMember = await GroupMember.findOne({
+    where: { group_id: groupId, user_id: userId },
+  });
+
+  if (!groupMember) {
+    throw new Error('You are not a member of this group');
+  }
+
+  await groupMember.destroy();
+  return groupMember;
+};
+
 module.exports = {
   createGroupService,
   getGroupsService,
   updateGroupService,
   deleteGroupService,
   addGroupMember,
+  leaveGroupService,
 };

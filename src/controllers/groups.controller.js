@@ -4,6 +4,7 @@ const {
   updateGroupService,
   deleteGroupService,
   addGroupMember,
+  leaveGroupService,
 } = require('../services/groups.service.js');
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
@@ -93,10 +94,24 @@ const addMemberToGroup = async (req, res) => {
   }
 };
 
+const leaveGroup = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { groupId } = req.params;
+
+    await leaveGroupService(userId, groupId);
+    res.status(200).json({ message: 'You have left the group' });
+  } catch (error) {
+    console.error(error);
+    res.json({ message: error.message || 'Error leaving group' });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
   updateGroup,
   deleteGroup,
   addMemberToGroup,
+  leaveGroup,
 };
