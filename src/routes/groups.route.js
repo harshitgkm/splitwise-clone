@@ -8,6 +8,7 @@ const {
   updateGroup,
   addMemberToGroup,
   leaveGroup,
+  removeUser,
 } = require('../controllers/groups.controller.js');
 
 const {
@@ -39,5 +40,12 @@ router.post(
 );
 
 router.post('/:groupId/leave', verifyToken, leaveGroup);
+
+router.delete(
+  '/:groupId/:userId/remove',
+  verifyToken,
+  checkGroupAdmin,
+  removeUser,
+);
 
 module.exports = router;

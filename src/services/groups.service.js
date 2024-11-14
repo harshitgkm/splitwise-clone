@@ -104,6 +104,30 @@ const leaveGroupService = async (userId, groupId) => {
   return groupMember;
 };
 
+const removeUserService = async (userId, groupId, targetUserId) => {
+  const group = await Group.findByPk(groupId);
+
+  if (!group) {
+    throw new Error('Group not found');
+  }
+
+  await GroupMember.findOne({
+    where: { group_id: groupId, user_id: userId },
+  });
+
+  const userToRemove = await GroupMember.findOne({
+    where: { group_id: groupId, user_id: targetUserId },
+  });
+
+  if (!userToRemove) {
+    throw new Error('User not found in the group');
+  }
+
+  await userToRemove.destroy();
+
+  return userToRemove;
+};
+
 module.exports = {
   createGroupService,
   getGroupsService,
@@ -111,4 +135,5 @@ module.exports = {
   deleteGroupService,
   addGroupMember,
   leaveGroupService,
+  removeUserService,
 };

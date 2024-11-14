@@ -5,6 +5,7 @@ const {
   deleteGroupService,
   addGroupMember,
   leaveGroupService,
+  removeUserService,
 } = require('../services/groups.service.js');
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
@@ -107,6 +108,19 @@ const leaveGroup = async (req, res) => {
   }
 };
 
+const removeUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { groupId, userId: targetUserId } = req.params;
+
+    await removeUserService(userId, groupId, targetUserId);
+    res.status(200).json({ message: 'User removed from the group' });
+  } catch (error) {
+    console.error(error);
+    res.json({ message: error.message || 'Error removing user from group' });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
@@ -114,4 +128,5 @@ module.exports = {
   deleteGroup,
   addMemberToGroup,
   leaveGroup,
+  removeUser,
 };
