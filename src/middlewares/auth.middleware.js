@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User, GroupMember } = require('../models');
+const { User } = require('../models');
 require('dotenv').config();
 const { redisClient } = require('../config/redis.js');
 
@@ -31,41 +31,6 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-const checkUserInGroup = async (req, res, next) => {
-  const userInGroup = await GroupMember.findOne({
-    where: { user_id: req.user.id, group_id: req.body.groupId },
-  });
-  if (!userInGroup) return res.json({ message: 'User not in this group' });
-  next();
-};
-
-const checkGroupAdmin = async (req, res, next) => {
-  const userId = req.user.id;
-  const groupId = req.params.groupId;
-
-  try {
-    const groupMember = await GroupMember.findOne({
-      where: {
-        user_id: userId,
-        group_id: groupId,
-        is_admin: true,
-      },
-    });
-
-    if (!groupMember) {
-      return res.status(403).json({
-        message: 'Access denied. Only group admin can perform this action.',
-      });
-    }
-
-    next();
-  } catch (error) {
-    res.json({ error: error.message });
-  }
-};
-
 module.exports = {
   verifyToken,
-  checkUserInGroup,
-  checkGroupAdmin,
 };

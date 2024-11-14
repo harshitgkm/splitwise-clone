@@ -103,17 +103,17 @@ const getAllExpensesService = async groupId => {
   return expenses;
 };
 
-const getExpenseDetailsService = async (groupId, expenseId) => {
+const getExpenseDetailsService = async expenseId => {
   const expense = await Expense.findOne({
-    where: { group_id: groupId, id: expenseId },
+    where: { id: expenseId },
   });
   if (!expense) throw new Error('Expense not found');
   return expense;
 };
 
-const updateExpenseService = async (groupId, expenseId, data) => {
+const updateExpenseService = async (expenseId, data) => {
   const expense = await Expense.findOne({
-    where: { group_id: groupId, id: expenseId },
+    where: { id: expenseId },
   });
   if (!expense) throw new Error('Expense not found');
 
@@ -126,9 +126,9 @@ const updateExpenseService = async (groupId, expenseId, data) => {
   return expense;
 };
 
-const deleteExpenseService = async (groupId, expenseId) => {
+const deleteExpenseService = async expenseId => {
   const expense = await Expense.findOne({
-    where: { group_id: groupId, id: expenseId },
+    where: { id: expenseId },
   });
   if (!expense) throw new Error('Expense not found');
   await expense.destroy();

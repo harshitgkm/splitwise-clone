@@ -11,11 +11,9 @@ const {
   removeUser,
 } = require('../controllers/groups.controller.js');
 
-const {
-  verifyToken,
-  checkGroupAdmin,
-} = require('../middlewares/auth.middleware.js');
+const { verifyToken } = require('../middlewares/auth.middleware.js');
 
+const { checkGroupAdmin } = require('../middlewares/groups.middleware.js');
 const upload = require('../middlewares/multer.middleware.js');
 
 router.post('/', verifyToken, createGroup);

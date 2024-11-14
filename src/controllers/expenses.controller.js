@@ -12,8 +12,8 @@ const {
 } = require('../services/expenses.service.js');
 
 const createExpense = async (req, res) => {
-  console.log('dfdf');
-  const { groupId, amount, description, splitType, users } = req.body;
+  const { groupId } = req.query;
+  const { amount, description, splitType, users } = req.body;
   const payerId = req.user.id;
 
   console.log(groupId, amount, description, splitType);
@@ -35,7 +35,7 @@ const createExpense = async (req, res) => {
 
 const getAllExpenses = async (req, res) => {
   try {
-    const expenses = await getAllExpensesService(req.body.groupId);
+    const expenses = await getAllExpensesService(req.query.groupId);
     res.status(200).json(expenses);
   } catch (error) {
     res.json({ message: error.message });
@@ -44,10 +44,7 @@ const getAllExpenses = async (req, res) => {
 
 const getExpenseDetails = async (req, res) => {
   try {
-    const expense = await getExpenseDetailsService(
-      req.body.groupId,
-      req.params.expenseId,
-    );
+    const expense = await getExpenseDetailsService(req.params.expenseId);
     res.status(200).json(expense);
   } catch (error) {
     res.json({ message: error.message });
@@ -55,10 +52,8 @@ const getExpenseDetails = async (req, res) => {
 };
 
 const updateExpense = async (req, res) => {
-  const { groupId } = req.body;
   try {
     const updatedExpense = await updateExpenseService(
-      groupId,
       req.params.expenseId,
       req.body,
     );
@@ -70,7 +65,7 @@ const updateExpense = async (req, res) => {
 
 const deleteExpense = async (req, res) => {
   try {
-    await deleteExpenseService(req.body.groupId, req.params.expenseId);
+    await deleteExpenseService(req.params.expenseId);
     res.json({ message: 'Expense deleted successfully' });
   } catch (error) {
     res.json({ message: error.message });
@@ -79,7 +74,7 @@ const deleteExpense = async (req, res) => {
 
 const settleUpExpense = async (req, res) => {
   const { payerId, payeeId, amount } = req.body;
-  const expenseId = req.params;
+  const expenseId = req.query;
 
   try {
     const result = await settleUpService(payerId, payeeId, amount, expenseId);
