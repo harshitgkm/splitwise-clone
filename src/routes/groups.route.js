@@ -9,6 +9,7 @@ const {
   addMemberToGroup,
   leaveGroup,
   removeUser,
+  getAllPaymentsForGroup,
 } = require('../controllers/groups.controller.js');
 
 const { verifyToken } = require('../middlewares/auth.middleware.js');
@@ -45,5 +46,7 @@ router.delete(
   checkGroupAdmin,
   removeUser,
 );
+
+router.get('/:groupId/payments', verifyToken, getAllPaymentsForGroup);
 
 module.exports = router;

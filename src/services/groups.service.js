@@ -1,4 +1,4 @@
-const { Group, GroupMember, User } = require('../models');
+const { Group, GroupMember, User, Payment } = require('../models');
 
 const createGroupService = async (userId, groupData) => {
   const { name, type, profile_image_url } = groupData;
@@ -128,6 +128,15 @@ const removeUserService = async (userId, groupId, targetUserId) => {
   return userToRemove;
 };
 
+const getAllPaymentsInGroupService = async groupId => {
+  const payments = await Payment.findAll({
+    where: { group_id: groupId },
+    order: [['created_at', 'DESC']],
+  });
+
+  return payments;
+};
+
 module.exports = {
   createGroupService,
   getGroupsService,
@@ -136,4 +145,5 @@ module.exports = {
   addGroupMember,
   leaveGroupService,
   removeUserService,
+  getAllPaymentsInGroupService,
 };

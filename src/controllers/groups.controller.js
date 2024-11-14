@@ -6,6 +6,7 @@ const {
   addGroupMember,
   leaveGroupService,
   removeUserService,
+  getAllPaymentsInGroupService,
 } = require('../services/groups.service.js');
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
@@ -121,6 +122,17 @@ const removeUser = async (req, res) => {
   }
 };
 
+const getAllPaymentsForGroup = async (req, res) => {
+  const { groupId } = req.params;
+
+  try {
+    const payments = await getAllPaymentsInGroupService(groupId);
+    return res.status(200).json(payments);
+  } catch (error) {
+    res.json({ message: error.message || 'Error getting payments' });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
@@ -129,4 +141,5 @@ module.exports = {
   addMemberToGroup,
   leaveGroup,
   removeUser,
+  getAllPaymentsForGroup,
 };
