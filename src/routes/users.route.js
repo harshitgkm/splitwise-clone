@@ -13,12 +13,18 @@ const { verifyToken } = require('../middlewares/auth.middleware.js');
 
 const upload = require('../middlewares/multer.middleware.js');
 
+const {
+  updateUserValidator,
+  addFriendValidator,
+} = require('../validators/users.validator');
+
 const router = express.Router();
 
 router.get('/me', verifyToken, getUserProfile);
 
 router.put(
   '/me',
+  updateUserValidator,
   verifyToken,
   upload.single('profile_image'),
   updateUserProfile,
@@ -26,7 +32,7 @@ router.put(
 
 router.get('/outstanding-balance', verifyToken, getOutstandingBalance);
 
-router.post('/friends', verifyToken, addFriend);
+router.post('/friends', addFriendValidator, verifyToken, addFriend);
 
 router.get('/friends', verifyToken, getFriendsList);
 
