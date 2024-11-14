@@ -4,6 +4,7 @@ const {
   calculateOutstandingBalance,
   addFriendService,
   getFriends,
+  getAllPaymentsService,
 } = require('../services/users.service');
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
@@ -88,10 +89,25 @@ const getFriendsList = async (req, res) => {
   }
 };
 
+const getAllPaymentsForUser = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const payments = await getAllPaymentsService(userId);
+    return res.status(200).json(payments);
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+};
+
+module.exports = {
+  getAllPaymentsForUser,
+};
 module.exports = {
   getUserProfile,
   updateUserProfile,
   getOutstandingBalance,
   addFriend,
   getFriendsList,
+  getAllPaymentsForUser,
 };

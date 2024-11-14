@@ -1,4 +1,4 @@
-const { User, ExpenseSplit, FriendList } = require('../models');
+const { User, ExpenseSplit, FriendList, Payment } = require('../models');
 require('dotenv').config();
 const Op = require('sequelize');
 
@@ -61,10 +61,24 @@ const getFriends = async userId => {
   return friend;
 };
 
+const getAllPaymentsService = async userId => {
+  console.log(userId);
+  const payments = await Payment.findAll({
+    where: Op.or(
+      Op.literal(`"payer_id" = CAST('${userId}' AS UUID)`),
+      Op.literal(`"payee_id" = CAST('${userId}' AS UUID)`),
+    ),
+    order: [['created_at', 'DESC']],
+  });
+
+  return payments;
+};
+
 module.exports = {
   getUserById,
   updateUser,
   calculateOutstandingBalance,
   addFriendService,
   getFriends,
+  getAllPaymentsService,
 };

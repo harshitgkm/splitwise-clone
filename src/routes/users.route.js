@@ -6,6 +6,7 @@ const {
   getOutstandingBalance,
   addFriend,
   getFriendsList,
+  getAllPaymentsForUser,
 } = require('../controllers/users.controller.js');
 
 const { verifyToken } = require('../middlewares/auth.middleware.js');
@@ -28,5 +29,7 @@ router.get('/outstanding-balance', verifyToken, getOutstandingBalance);
 router.post('/friends', verifyToken, addFriend);
 
 router.get('/friends', verifyToken, getFriendsList);
+
+router.get('/:userId/payments', verifyToken, getAllPaymentsForUser);
 
 module.exports = router;
