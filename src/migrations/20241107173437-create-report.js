@@ -17,19 +17,11 @@ module.exports = {
           key: 'id',
         },
       },
-      group_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'groups',
-          key: 'id',
-        },
-      },
       report_url: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      generated_at: {
+      created_at: {
         type: Sequelize.DATE,
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),

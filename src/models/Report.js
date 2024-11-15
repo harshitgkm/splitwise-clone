@@ -11,9 +11,6 @@ module.exports = (sequelize, DataTypes) => {
       Report.belongsTo(models.User, {
         foreignKey: 'user_id',
       });
-      Report.belongsTo(models.Group, {
-        foreignKey: 'group_id',
-      });
     }
   }
   Report.init(
@@ -31,19 +28,11 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      group_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'groups',
-          key: 'id',
-        },
-      },
       report_url: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      generated_at: {
+      created_at: {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW,
@@ -53,6 +42,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'Report',
+      tableName: 'reports',
       paranoid: true,
       timestamps: true,
     },
