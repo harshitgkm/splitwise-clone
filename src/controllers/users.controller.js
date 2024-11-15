@@ -6,6 +6,7 @@ const {
   getFriends,
   getAllPaymentsService,
   generateExpenseReportService,
+  generatePDFAndUploadToS3,
 } = require('../services/users.service');
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
@@ -111,6 +112,23 @@ const generateExpenseReport = async (req, res) => {
   }
 };
 
+const exportReportToPDF = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const s3Url = await generatePDFAndUploadToS3(userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Report generated and saved to S3 successfully',
+      url: s3Url,
+    });
+  } catch (error) {
+    res.json({
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
@@ -119,4 +137,5 @@ module.exports = {
   getFriendsList,
   getAllPaymentsForUser,
   generateExpenseReport,
+  exportReportToPDF,
 };

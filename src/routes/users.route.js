@@ -8,6 +8,7 @@ const {
   getFriendsList,
   getAllPaymentsForUser,
   generateExpenseReport,
+  exportReportToPDF,
 } = require('../controllers/users.controller.js');
 
 const { verifyToken } = require('../middlewares/auth.middleware.js');
@@ -40,5 +41,7 @@ router.get('/friends', verifyToken, getFriendsList);
 router.get('/:userId/payments', verifyToken, getAllPaymentsForUser);
 
 router.get('/generate-report', verifyToken, generateExpenseReport);
+
+router.get('/report-pdf', verifyToken, exportReportToPDF);
 
 module.exports = router;

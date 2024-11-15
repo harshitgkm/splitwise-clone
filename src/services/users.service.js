@@ -4,10 +4,15 @@ const {
   ExpenseSplit,
   FriendList,
   Payment,
+  Report,
 } = require('../models');
 require('dotenv').config();
 const Op = require('sequelize');
 const { Sequelize } = require('sequelize');
+const { uploadFileToS3 } = require('../helpers/aws.helper.js');
+const PDFDocument = require('pdfkit');
+const { PassThrough } = require('stream');
+const { v4: uuidv4 } = require('uuid');
 
 const getUserById = async userId => {
   console.log('Fetching user by ID');
@@ -114,6 +119,69 @@ const generateExpenseReportService = async userId => {
   }
 };
 
+const generatePDFAndUploadToS3 = async userId => {
+  try {
+    const reportData = await generateExpenseReportService(userId);
+    console.log('Hello worrld');
+    console.log(reportData);
+
+    // const fs = require('fs');
+    // const path = require('path');
+
+    //create a pdf document
+    const pdfDoc = new PDFDocument();
+    const passThroughStream = new PassThrough();
+    pdfDoc.pipe(passThroughStream);
+
+    //add content to the PDF
+    pdfDoc.fontSize(18).text('Expense Report', { align: 'center' });
+    pdfDoc.moveDown();
+    pdfDoc.fontSize(12).text(`Total Expenses: ${reportData.totalExpenses}`);
+    pdfDoc.text(`Total Payments: ${reportData.totalPayments}`);
+    pdfDoc.text(`Balance: ${reportData.balance}`);
+    pdfDoc.end();
+
+    //save to local
+
+    // const pdfPath = path.join(__dirname, `expense-report-${userId}.pdf`);
+    // const writeStream = fs.createWriteStream(pdfPath);
+    // pdfDoc.pipe(writeStream);
+    // pdfDoc.end();
+
+    // writeStream.on('finish', () => {
+    //   console.log(`PDF report saved locally at ${pdfPath}`);
+    // });
+
+    pdfDoc.on('data', chunk => {
+      console.log('Writing chunk to buffer:', chunk);
+    });
+
+    //prepare file object for S3 upload
+    const pdfFile = {
+      originalname: `expense-report-${userId}-${uuidv4()}.pdf`,
+      buffer: passThroughStream.read(),
+      ACL: 'public-read',
+      mimetype: 'application/pdf',
+    };
+
+    //upload PDF to S3 and get the file url
+    const s3Url = await uploadFileToS3(pdfFile);
+
+    console.log('hello world 2 ');
+
+    await Report.create({
+      user_id: userId,
+      report_url: s3Url,
+    });
+
+    return s3Url;
+  } catch (error) {
+    throw new Error(
+      'Error generating and uploading PDF report: ' + error.message,
+    );
+  }
+};
+
 module.exports = {
   getUserById,
   updateUser,
@@ -122,4 +190,5 @@ module.exports = {
   getFriends,
   getAllPaymentsService,
   generateExpenseReportService,
+  generatePDFAndUploadToS3,
 };
