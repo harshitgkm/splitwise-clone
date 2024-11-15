@@ -152,9 +152,9 @@ const generatePDFAndUploadToS3 = async userId => {
     //   console.log(`PDF report saved locally at ${pdfPath}`);
     // });
 
-    pdfDoc.on('data', chunk => {
-      console.log('Writing chunk to buffer:', chunk);
-    });
+    // pdfDoc.on('data', chunk => {
+    //   console.log('Writing chunk to buffer:', chunk);
+    // });
 
     //prepare file object for S3 upload
     const pdfFile = {

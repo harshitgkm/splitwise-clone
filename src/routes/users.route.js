@@ -45,6 +45,6 @@ router.get('/generate-report', verifyToken, generateExpenseReport);
 
 router.get('/report-pdf', verifyToken, exportReportToPDF);
 
-router.get('/:userId/reports', verifyToken, getAllReports);
+router.get('/reports', verifyToken, getAllReports);
 
 module.exports = router;

@@ -131,7 +131,7 @@ const exportReportToPDF = async (req, res) => {
 };
 
 const getAllReports = async (req, res) => {
-  const { userId } = req.params;
+  const userId = req.user.id;
 
   try {
     const reports = await getReportsService(userId);
