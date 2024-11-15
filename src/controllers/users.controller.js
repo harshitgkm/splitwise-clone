@@ -101,9 +101,6 @@ const getAllPaymentsForUser = async (req, res) => {
 };
 
 module.exports = {
-  getAllPaymentsForUser,
-};
-module.exports = {
   getUserProfile,
   updateUserProfile,
   getOutstandingBalance,

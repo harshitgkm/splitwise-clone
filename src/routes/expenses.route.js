@@ -18,17 +18,34 @@ const { verifyToken } = require('../middlewares/auth.middleware.js');
 
 const { checkUserInGroup } = require('../middlewares/expenses.middleware.js');
 
-router.post('/', verifyToken, checkUserInGroup, createExpense);
+const {
+  createExpenseValidator,
+  updateExpenseValidator,
+  settleUpValidator,
+} = require('../validators/expenses.validator');
+
+router.post(
+  '/',
+  createExpenseValidator,
+  verifyToken,
+  checkUserInGroup,
+  createExpense,
+);
 
 router.get('/', verifyToken, checkUserInGroup, getAllExpenses);
 
 router.get('/:expenseId', verifyToken, getExpenseDetails);
 
-router.put('/:expenseId', verifyToken, updateExpense);
+router.put('/:expenseId', updateExpenseValidator, verifyToken, updateExpense);
 
 router.delete('/:expenseId', verifyToken, deleteExpense);
 
-router.post('/:expenseId/settle-up', verifyToken, settleUpExpense);
+router.post(
+  '/:expenseId/settle-up',
+  settleUpValidator,
+  verifyToken,
+  settleUpExpense,
+);
 
 router.post('/:expenseId/comments', verifyToken, createComment);
 
