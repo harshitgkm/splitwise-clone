@@ -7,17 +7,27 @@ const {
 } = require('../services/auth.service');
 const jwt = require('jsonwebtoken');
 
-let tempUserStore = {};
+const { redisClient } = require('../config/redis.js');
 
 const register = async (req, res) => {
-  console.log('Before request body of register in controller');
   const { username, email } = req.body;
 
   try {
-    tempUserStore[email] = { username, email };
+    const userKey = `register:${email}`;
+
+    const existingDetails = await redisClient.get(userKey);
+    if (existingDetails) {
+      return res.json({
+        message:
+          'User already in registration process, please continue with OTP verification.',
+      });
+    }
+    await redisClient.set(userKey, JSON.stringify({ username, email }), {
+      EX: 1800,
+    });
 
     console.log(
-      `User details stored temporarily, redirecting to request OTP...`,
+      'User details stored temporarily in Redis, redirecting to request OTP...',
     );
     res.json({ message: 'redirect to request-otp' });
   } catch (err) {
@@ -32,9 +42,11 @@ const login = async (req, res) => {
     const ifUserExist = await checkExistingUser(email);
 
     if (ifUserExist) {
-      return res.json({ message: 'redirect to request-otp' });
+      await requestOtpService(email);
+      return res.json({ message: 'OTP sent to your email for login' });
+    } else {
+      return res.json({ message: 'This user does not exist in the DB' });
     }
-    res.json({ message: 'This user does not exist in DB' });
   } catch (err) {
     res.json({ error: err.message });
   }
@@ -44,21 +56,20 @@ const requestOtp = async (req, res) => {
   const { email } = req.body;
 
   try {
-    const userDetails = tempUserStore[email];
+    const userKey = `register:${email}`;
+    const userDetails = await redisClient.get(userKey);
+
     if (!userDetails) {
-      const userExists = await checkExistingUser(email);
-      if (!userExists) {
-        return res
-          .status(404)
-          .json({ message: 'User not found. Please register first.' });
-      }
-      // If the user exists, it's a login, proceed with sending OTP
-      console.log('Sending OTP to:', email);
-      await requestOtpService(email);
-      return res.json({ message: 'OTP sent to your email for login' });
+      return res.status(404).json({
+        message:
+          'User details not found. Please start the registration process.',
+      });
     }
-    console.log('Sending OTP to:', email);
-    await requestOtpService(email);
+
+    const { email: storedEmail } = JSON.parse(userDetails);
+    console.log('Sending OTP to:', storedEmail);
+    await requestOtpService(storedEmail);
+
     res.json({ message: 'OTP sent to your email for registration' });
   } catch (error) {
     res.json({ error: error.message });
@@ -67,9 +78,6 @@ const requestOtp = async (req, res) => {
 
 const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
-  console.log(
-    `after getting otp form email : the user entered otp is: ${otp} and ${email}`,
-  );
 
   try {
     const isValidOtp = await validateOtp(email, otp);
@@ -77,24 +85,30 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
 
-    const userDetails = tempUserStore[email];
+    const userKey = `register:${email}`;
+    const userDetails = await redisClient.get(userKey);
 
     if (userDetails) {
-      const message = await registerUser(
-        userDetails.username,
-        userDetails.email,
-      );
+      //registration flow
+      const { username, email: storedEmail } = JSON.parse(userDetails);
+
+      const message = await registerUser(username, storedEmail);
+
       console.log(`User registered successfully: ${message}`);
+      await redisClient.del(userKey);
 
-      delete tempUserStore[email];
-
-      const token = jwt.sign(
-        { email: userDetails.email },
-        process.env.JWT_SECRET,
-        { expiresIn: '20h' },
-      );
+      const token = jwt.sign({ email: storedEmail }, process.env.JWT_SECRET, {
+        expiresIn: '20h',
+      });
 
       return res.json({ message: 'Registration successful', token });
+    }
+
+    //if user is not in redis -> login flow
+    const userExists = await checkExistingUser(email);
+
+    if (!userExists) {
+      return res.status(404).json({ message: 'User does not exist.' });
     }
 
     console.log('User logged in successfully');
@@ -102,7 +116,7 @@ const verifyOtp = async (req, res) => {
       expiresIn: '20h',
     });
 
-    res.json({ message: 'Login successful', token });
+    return res.json({ message: 'Login successful', token });
   } catch (error) {
     res.json({ error: error.message });
   }
