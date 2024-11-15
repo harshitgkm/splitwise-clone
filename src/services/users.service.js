@@ -182,6 +182,25 @@ const generatePDFAndUploadToS3 = async userId => {
   }
 };
 
+const getReportsService = async userId => {
+  try {
+    const reports = await Report.findAll({
+      where: {
+        user_id: userId,
+      },
+      order: [['created_at', 'DESC']],
+    });
+
+    if (reports.length === 0) {
+      throw new Error('No reports found for this user');
+    }
+
+    return reports;
+  } catch (error) {
+    throw new Error(error.message || 'Error retrieving reports');
+  }
+};
+
 module.exports = {
   getUserById,
   updateUser,
@@ -191,4 +210,5 @@ module.exports = {
   getAllPaymentsService,
   generateExpenseReportService,
   generatePDFAndUploadToS3,
+  getReportsService,
 };

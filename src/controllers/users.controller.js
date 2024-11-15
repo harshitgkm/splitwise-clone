@@ -7,6 +7,7 @@ const {
   getAllPaymentsService,
   generateExpenseReportService,
   generatePDFAndUploadToS3,
+  getReportsService,
 } = require('../services/users.service');
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
@@ -129,6 +130,18 @@ const exportReportToPDF = async (req, res) => {
   }
 };
 
+const getAllReports = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const reports = await getReportsService(userId);
+
+    return res.status(200).json(reports);
+  } catch (error) {
+    return res.json({ error: error.message });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
@@ -138,4 +151,5 @@ module.exports = {
   getAllPaymentsForUser,
   generateExpenseReport,
   exportReportToPDF,
+  getAllReports,
 };

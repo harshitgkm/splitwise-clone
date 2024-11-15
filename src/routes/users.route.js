@@ -9,6 +9,7 @@ const {
   getAllPaymentsForUser,
   generateExpenseReport,
   exportReportToPDF,
+  getAllReports,
 } = require('../controllers/users.controller.js');
 
 const { verifyToken } = require('../middlewares/auth.middleware.js');
@@ -43,5 +44,7 @@ router.get('/:userId/payments', verifyToken, getAllPaymentsForUser);
 router.get('/generate-report', verifyToken, generateExpenseReport);
 
 router.get('/report-pdf', verifyToken, exportReportToPDF);
+
+router.get('/:userId/reports', verifyToken, getAllReports);
 
 module.exports = router;
