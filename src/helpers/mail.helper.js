@@ -25,4 +25,29 @@ const sendOtpEmail = async (email, otp) => {
   }
 };
 
-module.exports = sendOtpEmail;
+const sendExpenseNotification = async (
+  emailAddresses,
+  expense,
+  description,
+  amount,
+) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: emailAddresses,
+    subject: 'New Expense Added',
+    text: `A new expense has been added to your group:\n
+           Description: ${description}\n
+           Amount: $${amount}\n
+           Expense ID: ${expense.id}\n\n
+           You can view the details in the app.`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Notification emails sent successfully');
+  } catch (error) {
+    console.error('Error sending notification emails:', error);
+  }
+};
+
+module.exports = { sendOtpEmail, sendExpenseNotification };

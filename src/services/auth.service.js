@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { redisClient } = require('../config/redis.js');
 const { generateOtp, verifyOtp, saveOtp } = require('../helpers/otp.helper.js');
-const sendOtpEmail = require('../helpers/mail.helper');
+const { sendOtpEmail } = require('../helpers/mail.helper');
 require('dotenv').config();
 
 const generateToken = email => {

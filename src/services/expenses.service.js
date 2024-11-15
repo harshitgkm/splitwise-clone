@@ -7,6 +7,8 @@ const {
   Payment,
 } = require('../models');
 
+const { sendExpenseNotification } = require('../helpers/mail.helper.js');
+
 const createExpenseService = async (
   groupId,
   payerId,
@@ -101,6 +103,11 @@ const createExpenseService = async (
   if (totalAmountPaid !== amount) {
     throw new Error('The total amount paid does not match the expense amount.');
   }
+
+  const groupUsers = await group.getUsers();
+  const emailAddresses = groupUsers.map(user => user.email);
+
+  await sendExpenseNotification(emailAddresses, expense, description, amount);
 
   return expense;
 };
