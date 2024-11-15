@@ -17,12 +17,18 @@ const { verifyToken } = require('../middlewares/auth.middleware.js');
 const { checkGroupAdmin } = require('../middlewares/groups.middleware.js');
 const upload = require('../middlewares/multer.middleware.js');
 
-router.post('/', verifyToken, createGroup);
+const {
+  createGroupValidator,
+  updateGroupValidator,
+} = require('../validators/groups.validator');
+
+router.post('/', createGroupValidator, verifyToken, createGroup);
 
 router.get('/', verifyToken, getGroups);
 
 router.put(
   '/:groupId',
+  updateGroupValidator,
   verifyToken,
   checkGroupAdmin,
   upload.single('group_profile_url'),
