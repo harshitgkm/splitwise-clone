@@ -1,6 +1,13 @@
-const { User, ExpenseSplit, FriendList, Payment } = require('../models');
+const {
+  User,
+  Expense,
+  ExpenseSplit,
+  FriendList,
+  Payment,
+} = require('../models');
 require('dotenv').config();
 const Op = require('sequelize');
+const { Sequelize } = require('sequelize');
 
 const getUserById = async userId => {
   console.log('Fetching user by ID');
@@ -74,6 +81,39 @@ const getAllPaymentsService = async userId => {
   return payments;
 };
 
+const generateExpenseReportService = async userId => {
+  try {
+    const totalExpenses = await Expense.findAll({
+      where: { payer_id: userId },
+      attributes: [
+        [Sequelize.fn('sum', Sequelize.col('amount')), 'totalExpenses'],
+      ],
+      raw: true,
+    });
+
+    const totalPayments = await Payment.findAll({
+      where: { payer_id: userId },
+      attributes: [
+        [Sequelize.fn('sum', Sequelize.col('amount')), 'totalPayments'],
+      ],
+      raw: true,
+    });
+
+    const balance =
+      (totalExpenses[0].totalExpenses || 0) -
+      (totalPayments[0].totalPayments || 0);
+
+    return {
+      totalExpenses: totalExpenses[0].totalExpenses || 0,
+      totalPayments: totalPayments[0].totalPayments || 0,
+      balance,
+    };
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to generate report data');
+  }
+};
+
 module.exports = {
   getUserById,
   updateUser,
@@ -81,4 +121,5 @@ module.exports = {
   addFriendService,
   getFriends,
   getAllPaymentsService,
+  generateExpenseReportService,
 };

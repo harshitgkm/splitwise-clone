@@ -7,6 +7,7 @@ const {
   addFriend,
   getFriendsList,
   getAllPaymentsForUser,
+  generateExpenseReport,
 } = require('../controllers/users.controller.js');
 
 const { verifyToken } = require('../middlewares/auth.middleware.js');
@@ -37,5 +38,7 @@ router.post('/friends', addFriendValidator, verifyToken, addFriend);
 router.get('/friends', verifyToken, getFriendsList);
 
 router.get('/:userId/payments', verifyToken, getAllPaymentsForUser);
+
+router.get('/generate-report', verifyToken, generateExpenseReport);
 
 module.exports = router;
