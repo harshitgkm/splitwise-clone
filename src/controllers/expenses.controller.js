@@ -36,8 +36,10 @@ const createExpense = async (req, res) => {
 };
 
 const getAllExpenses = async (req, res) => {
+  const groupId = req.query.groupId;
+  const { page = 1, limit = 10 } = req.query;
   try {
-    const expenses = await getAllExpensesService(req.query.groupId);
+    const expenses = await getAllExpensesService(groupId, page, limit);
     res.status(200).json(expenses);
   } catch (error) {
     res.json({ message: error.message });

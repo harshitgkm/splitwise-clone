@@ -112,8 +112,14 @@ const createExpenseService = async (
   return expense;
 };
 
-const getAllExpensesService = async groupId => {
-  const expenses = await Expense.findAll({ where: { group_id: groupId } });
+const getAllExpensesService = async (groupId, page = 1, limit = 10) => {
+  const offset = (page - 1) * limit;
+
+  const expenses = await Expense.findAll({
+    where: { group_id: groupId },
+    limit: limit,
+    offset: offset,
+  });
   return expenses;
 };
 
