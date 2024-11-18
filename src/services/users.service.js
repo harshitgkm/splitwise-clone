@@ -62,16 +62,6 @@ const getFriends = async (userId, page = 1, limit = 10) => {
       Op.literal(`"friend_one" = CAST('${userId}' AS UUID)`),
       Op.literal(`"friend_two" = CAST('${userId}' AS UUID)`),
     ),
-    include: [
-      {
-        model: User,
-        as: 'friend_one_details',
-      },
-      {
-        model: User,
-        as: 'friend_two_details',
-      },
-    ],
     limit: limit,
     offset: offset,
   });
