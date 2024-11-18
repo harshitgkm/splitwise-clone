@@ -78,14 +78,16 @@ const getFriends = async (userId, page = 1, limit = 10) => {
   return friend;
 };
 
-const getAllPaymentsService = async userId => {
-  console.log(userId);
+const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
+  const offset = (page - 1) * limit;
   const payments = await Payment.findAll({
     where: Op.or(
       Op.literal(`"payer_id" = CAST('${userId}' AS UUID)`),
       Op.literal(`"payee_id" = CAST('${userId}' AS UUID)`),
     ),
     order: [['created_at', 'DESC']],
+    limit: limit,
+    offset: offset,
   });
 
   return payments;

@@ -94,9 +94,10 @@ const getFriendsList = async (req, res) => {
 
 const getAllPaymentsForUser = async (req, res) => {
   const { userId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
 
   try {
-    const payments = await getAllPaymentsService(userId);
+    const payments = await getAllPaymentsService(userId, page, limit);
     return res.status(200).json(payments);
   } catch (err) {
     res.json({ error: err.message });
