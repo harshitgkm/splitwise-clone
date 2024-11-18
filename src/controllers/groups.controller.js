@@ -32,7 +32,7 @@ const getGroups = async (req, res) => {
     const userId = req.user.id;
     const { page = 1, limit = 10 } = req.query;
 
-    const groups = getGroupsService(userId, page, limit);
+    const groups = await getGroupsService(userId, page, limit);
 
     res.status(200).json(groups);
   } catch (error) {

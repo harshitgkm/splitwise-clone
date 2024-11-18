@@ -22,14 +22,13 @@ const createGroupService = async (userId, groupData) => {
 
 const getGroupsService = async (userId, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
-  return await Group.findAll({
-    include: {
-      model: GroupMember,
-      where: { user_id: userId },
-    },
+  const groups = await GroupMember.findAll({
+    where: { user_id: userId },
     limit: limit,
     offset: offset,
   });
+
+  return groups;
 };
 
 const updateGroupService = async (userId, groupId, groupData) => {
