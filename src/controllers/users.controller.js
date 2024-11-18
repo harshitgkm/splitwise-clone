@@ -80,10 +80,10 @@ const addFriend = async (req, res) => {
 
 const getFriendsList = async (req, res) => {
   const userId = req.user.id;
-  console.log(userId);
+  const { page = 1, limit = 10 } = req.query;
 
   try {
-    const friendsList = await getFriends(userId);
+    const friendsList = await getFriends(userId, page, limit);
     console.log(friendsList);
     res.status(200).json({ friends: friendsList });
   } catch (err) {
@@ -132,9 +132,10 @@ const exportReportToPDF = async (req, res) => {
 
 const getAllReports = async (req, res) => {
   const userId = req.user.id;
+  const { page = 1, limit = 10 } = req.query;
 
   try {
-    const reports = await getReportsService(userId);
+    const reports = await getReportsService(userId, page, limit);
 
     return res.status(200).json(reports);
   } catch (error) {

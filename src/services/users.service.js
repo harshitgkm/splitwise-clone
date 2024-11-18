@@ -52,8 +52,11 @@ const addFriendService = async (friend_one, friend_two) => {
   return newFriendship;
 };
 
-const getFriends = async userId => {
+const getFriends = async (userId, page = 1, limit = 10) => {
   console.log('User id => ', typeof userId);
+
+  const offset = (page - 1) * limit;
+
   let friend = await FriendList.findAll({
     where: Op.or(
       Op.literal(`"friend_one" = CAST('${userId}' AS UUID)`),
@@ -69,6 +72,8 @@ const getFriends = async userId => {
         as: 'friend_two_details',
       },
     ],
+    limit: limit,
+    offset: offset,
   });
   return friend;
 };
@@ -182,23 +187,22 @@ const generatePDFAndUploadToS3 = async userId => {
   }
 };
 
-const getReportsService = async userId => {
-  try {
-    const reports = await Report.findAll({
-      where: {
-        user_id: userId,
-      },
-      order: [['created_at', 'DESC']],
-    });
+const getReportsService = async (userId, page = 1, limit = 10) => {
+  const offset = (page - 1) * limit;
+  const reports = await Report.findAll({
+    where: {
+      user_id: userId,
+    },
+    order: [['created_at', 'DESC']],
+    limit: limit,
+    offset: offset,
+  });
 
-    if (reports.length === 0) {
-      throw new Error('No reports found for this user');
-    }
-
-    return reports;
-  } catch (error) {
-    throw new Error(error.message || 'Error retrieving reports');
+  if (reports.length === 0) {
+    throw new Error('No reports found for this user');
   }
+
+  return reports;
 };
 
 module.exports = {
