@@ -20,12 +20,15 @@ const createGroupService = async (userId, groupData) => {
   return group;
 };
 
-const getGroupsService = async userId => {
+const getGroupsService = async (userId, page = 1, limit = 10) => {
+  const offset = (page - 1) * limit;
   return await Group.findAll({
     include: {
       model: GroupMember,
       where: { user_id: userId },
     },
+    limit: limit,
+    offset: offset,
   });
 };
 

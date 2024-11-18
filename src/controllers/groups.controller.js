@@ -30,8 +30,9 @@ const createGroup = async (req, res) => {
 const getGroups = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page = 1, limit = 10 } = req.query;
 
-    const groups = getGroupsService(userId);
+    const groups = getGroupsService(userId, page, limit);
 
     res.status(200).json(groups);
   } catch (error) {
