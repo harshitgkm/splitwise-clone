@@ -26,9 +26,6 @@ const register = async (req, res) => {
       EX: 1800,
     });
 
-    console.log(
-      'User details stored temporarily in Redis, redirecting to request OTP...',
-    );
     res.json({ message: 'redirect to request-otp' });
   } catch (err) {
     res.json({ error: err.message });
@@ -67,7 +64,6 @@ const requestOtp = async (req, res) => {
     }
 
     const { email: storedEmail } = JSON.parse(userDetails);
-    console.log('Sending OTP to:', storedEmail);
     await requestOtpService(storedEmail);
 
     res.json({ message: 'OTP sent to your email for registration' });
@@ -93,8 +89,8 @@ const verifyOtp = async (req, res) => {
       const { username, email: storedEmail } = JSON.parse(userDetails);
 
       const message = await registerUser(username, storedEmail);
+      console.log(message);
 
-      console.log(`User registered successfully: ${message}`);
       await redisClient.del(userKey);
 
       const token = jwt.sign({ email: storedEmail }, process.env.JWT_SECRET, {
@@ -111,7 +107,6 @@ const verifyOtp = async (req, res) => {
       return res.status(404).json({ message: 'User does not exist.' });
     }
 
-    console.log('User logged in successfully');
     const token = jwt.sign({ email }, process.env.JWT_SECRET, {
       expiresIn: '20h',
     });
