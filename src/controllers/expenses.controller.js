@@ -11,6 +11,8 @@ const {
   deleteCommentService,
 } = require('../services/expenses.service.js');
 
+const { uploadFileToS3 } = require('../helpers/aws.helper.js');
+
 const createExpense = async (req, res) => {
   const { groupId } = req.query;
   const { amount, description, splitType, users } = req.body;
@@ -53,9 +55,19 @@ const getExpenseDetails = async (req, res) => {
 
 const updateExpense = async (req, res) => {
   try {
+    const expenseData = req.body;
+
+    if (req.url) {
+      console.log(req.url);
+
+      const image = await uploadFileToS3(req.url);
+      console.log(image);
+      expenseData.expense_image_url = image;
+    }
+
     const updatedExpense = await updateExpenseService(
       req.params.expenseId,
-      req.body,
+      expenseData,
     );
     res.status(200).json(updatedExpense);
   } catch (error) {

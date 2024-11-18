@@ -17,6 +17,7 @@ const {
 const { verifyToken } = require('../middlewares/auth.middleware.js');
 
 const { checkUserInGroup } = require('../middlewares/expenses.middleware.js');
+const upload = require('../middlewares/multer.middleware.js');
 
 const {
   createExpenseValidator,
@@ -36,7 +37,13 @@ router.get('/', verifyToken, checkUserInGroup, getAllExpenses);
 
 router.get('/:expenseId', verifyToken, getExpenseDetails);
 
-router.put('/:expenseId', updateExpenseValidator, verifyToken, updateExpense);
+router.put(
+  '/:expenseId',
+  updateExpenseValidator,
+  verifyToken,
+  upload.single('expense_image_url'),
+  updateExpense,
+);
 
 router.delete('/:expenseId', verifyToken, deleteExpense);
 
