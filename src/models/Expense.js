@@ -11,9 +11,9 @@ module.exports = (sequelize, DataTypes) => {
       Expense.belongsTo(models.Group, {
         foreignKey: 'group_id',
       });
-      Expense.belongsTo(models.User, {
-        foreignKey: 'payer_id',
-      });
+      // Expense.belongsTo(models.User, {
+      //   foreignKey: 'payer_id',
+      // });
       Expense.hasMany(models.ExpenseSplit, {
         foreignKey: 'expense_id',
       });
@@ -34,14 +34,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         references: {
           model: 'groups',
-          key: 'id',
-        },
-      },
-      payer_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'users',
           key: 'id',
         },
       },
