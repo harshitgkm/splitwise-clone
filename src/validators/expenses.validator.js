@@ -4,12 +4,14 @@ const createExpenseValidator = (req, res, next) => {
   const schema = Joi.object({
     amount: Joi.number().precision(2).positive().required(),
     description: Joi.string().max(255).optional(),
-    splitType: Joi.string().valid('EQUALLY', 'PERCENTAGE', 'SHARES').required(),
+    splitType: Joi.string()
+      .valid('EQUALLY', 'PERCENTAGE', 'SHARES', 'UNEQUAL')
+      .required(),
     users: Joi.array()
       .items(
         Joi.object({
           userId: Joi.string().uuid().required(),
-          amountPaid: Joi.number().precision(2).positive().required(),
+          amountPaid: Joi.number().precision(2).positive().optional(),
           amountOwed: Joi.number().precision(2).optional(),
           percentage: Joi.number().precision(2).optional(),
           shares: Joi.number().precision(2).optional(),
@@ -27,7 +29,9 @@ const updateExpenseValidator = (req, res, next) => {
   const schema = Joi.object({
     amount: Joi.number().precision(2).positive().optional(),
     description: Joi.string().max(255).optional(),
-    splitType: Joi.string().valid('EQUALLY', 'PERCENTAGE', 'SHARES').optional(),
+    splitType: Joi.string()
+      .valid('EQUALLY', 'PERCENTAGE', 'SHARES', 'UNEQUAL')
+      .optional(),
     users: Joi.array()
       .items(
         Joi.object({
