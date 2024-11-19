@@ -11,7 +11,6 @@ const { sendExpenseNotification } = require('../helpers/mail.helper.js');
 
 const createExpenseService = async (
   groupId,
-  payerId,
   amount,
   description,
   splitType,
@@ -20,93 +19,141 @@ const createExpenseService = async (
   const group = await Group.findByPk(groupId);
   if (!group) throw new Error('Group not found');
 
-  console.log(groupId, payerId, description, amount, splitType);
-
   const expense = await Expense.create({
     group_id: groupId,
-    payer_id: payerId,
     description: description || '',
-    amount: amount,
+    amount,
     split_type: splitType,
   });
 
-  let totalAmountPaid = 0; // To ensure that the total amount paid matches the expense amount
-
-  if (splitType === 'EQUALLY') {
-    const groupUsers = await group.getUsers();
-    console.log(groupUsers);
-    console.log(groupUsers.length);
-    const share = amount / groupUsers.length;
-
-    for (const user of groupUsers) {
-      totalAmountPaid += user.id === payerId ? amount : 0;
-
-      await ExpenseSplit.create({
-        expense_id: expense.id,
-        user_id: user.id,
-        amount_paid: user.id === payerId ? amount : 0, // Only the payer pays the full amount
-        split_ratio: share,
-        amount_owed: user.id === payerId ? 0 : share, // Others owe their share
-      });
-    }
-  } else if (splitType === 'UNEQUAL') {
-    for (const user of users) {
-      const { userId, amountPaid, amountOwed } = user;
-      totalAmountPaid += amountPaid;
-
-      await ExpenseSplit.create({
-        expense_id: expense.id,
-        user_id: userId,
-        amount_paid: amountPaid,
-        split_ratio: amountOwed,
-        amount_owed: amountOwed,
-      });
-    }
-  } else if (splitType === 'PERCENTAGE') {
-    for (const user of users) {
-      const { userId, percentage } = user;
-      const amountPaid = (percentage / 100) * amount;
-      const amountOwed = amount - amountPaid;
-
-      totalAmountPaid += amountPaid;
-
-      await ExpenseSplit.create({
-        expense_id: expense.id,
-        user_id: userId,
-        amount_paid: amountPaid,
-        split_ratio: (percentage / 100) * 100,
-        amount_owed: amountOwed,
-      });
-    }
-  } else if (splitType === 'SHARES') {
-    const totalShares = users.reduce((acc, user) => acc + user.shares, 0);
-    const shareValue = amount / totalShares;
-
-    for (const user of users) {
-      const { userId, shares } = user;
-      const amountPaid = shareValue * shares;
-      const amountOwed = amount - amountPaid;
-
-      totalAmountPaid += amountPaid;
-
-      await ExpenseSplit.create({
-        expense_id: expense.id,
-        user_id: userId,
-        amount_paid: amountPaid,
-        split_ratio: shareValue * shares,
-        amount_owed: amountOwed,
-      });
-    }
-  }
-
-  // check if total amount paid matches the actual expense amount
-  if (totalAmountPaid !== amount) {
-    throw new Error('The total amount paid does not match the expense amount.');
-  }
+  // let totalAmountPaid = 0;
 
   const groupUsers = await group.getUsers();
-  const emailAddresses = groupUsers.map(user => user.email);
 
+  switch (splitType) {
+    case 'EQUALLY':
+      {
+        const share = amount / groupUsers.length;
+
+        for (const user of groupUsers) {
+          const isPayer = users.some(u => u.userId === user.id);
+
+          const amountPaid = isPayer ? amount : 0;
+          const amountOwed = isPayer ? share - amount : share;
+
+          await ExpenseSplit.create({
+            expense_id: expense.id,
+            user_id: user.id,
+            amount_paid: amountPaid,
+            amount_owed: amountOwed,
+            split_ratio: share,
+          });
+        }
+      }
+      break;
+
+    case 'PERCENTAGE':
+      {
+        let totalPaidAmount = 0;
+        const totalExpense = amount;
+
+        for (const user of users) {
+          totalPaidAmount += (user.percentage / 100) * totalExpense;
+        }
+
+        const splitRatio = totalPaidAmount / users.length;
+
+        for (const user of users) {
+          const { userId, percentage } = user;
+
+          if (percentage < 0) {
+            throw new Error('Percentage cannot be negative.');
+          }
+
+          const amountPaid = (percentage / 100) * totalExpense;
+
+          const amountOwed = splitRatio - amountPaid;
+
+          await ExpenseSplit.create({
+            expense_id: expense.id,
+            user_id: userId,
+            amount_paid: amountPaid,
+            amount_owed: amountOwed,
+            split_ratio: splitRatio,
+          });
+        }
+
+        if (Math.abs(totalPaidAmount - totalExpense) > 0.01) {
+          throw new Error(
+            'The total paid amount must match the total expense.',
+          );
+        }
+      }
+      break;
+
+    case 'SHARES':
+      {
+        const totalShares = users.reduce((acc, user) => acc + user.shares, 0);
+
+        const splitRatio = amount / users.length;
+
+        for (const user of users) {
+          const { userId, shares } = user;
+
+          const amountPaid = (shares / totalShares) * amount;
+
+          const amountOwed = splitRatio - amountPaid;
+
+          await ExpenseSplit.create({
+            expense_id: expense.id,
+            user_id: userId,
+            amount_paid: amountPaid,
+            amount_owed: amountOwed,
+            split_ratio: splitRatio,
+          });
+        }
+      }
+      break;
+
+    case 'UNEQUAL':
+      {
+        let totalPaid = 0;
+
+        users.forEach(user => {
+          totalPaid += user.amount_paid;
+        });
+        if (totalPaid !== amount) {
+          throw new Error(
+            'The total amount paid must equal the total expense amount.',
+          );
+        }
+
+        for (const user of users) {
+          const { userId, amountPaid } = user;
+
+          if (amountPaid < 0) {
+            throw new Error('Amount paid cannot be negative.');
+          }
+
+          const splitRatio = amount / users.length;
+          const amountOwed = splitRatio - amountPaid;
+
+          await ExpenseSplit.create({
+            expense_id: expense.id,
+            user_id: userId,
+            amount_paid: amountPaid,
+            amount_owed: amountOwed,
+            split_ratio: splitRatio,
+          });
+        }
+      }
+      break;
+
+    default:
+      throw new Error('Invalid split type');
+  }
+
+  const emailAddresses = groupUsers.map(user => user.email);
   await sendExpenseNotification(emailAddresses, expense, description, amount);
 
   return expense;
@@ -131,17 +178,140 @@ const getExpenseDetailsService = async expenseId => {
   return expense;
 };
 
-const updateExpenseService = async (expenseId, data) => {
-  const expense = await Expense.findOne({
-    where: { id: expenseId },
-  });
+const updateExpenseService = async ({
+  expenseId,
+  description,
+  amount,
+  split_type,
+  users,
+}) => {
+  const expense = await Expense.findByPk(expenseId);
   if (!expense) throw new Error('Expense not found');
 
-  expense.description = data.description || expense.description;
-  expense.amount = data.amount || expense.amount;
-  expense.expense_image_url =
-    data.expense_image_url || expense.expense_image_url;
+  if (description) expense.description = description;
+  if (amount) expense.amount = parseFloat(amount);
+  if (split_type) expense.split_type = split_type;
+
+  // save the updated expense
   await expense.save();
+
+  // delete old splits
+  await ExpenseSplit.destroy({ where: { expense_id: expense.id } });
+
+  const group = await Group.findByPk(expense.group_id);
+  if (!group) throw new Error('Group not found');
+  const groupUsers = await group.getUsers();
+
+  const splits = [];
+
+  switch (split_type) {
+    case 'EQUALLY': {
+      const share = amount / groupUsers.length;
+
+      for (const user of groupUsers) {
+        const isPayer = users.some(u => u.userId === user.id);
+
+        const amountPaid = isPayer ? amount : 0;
+        const amountOwed = isPayer ? share - amount : share;
+
+        splits.push({
+          expense_id: expense.id,
+          user_id: user.id,
+          amount_paid: amountPaid,
+          amount_owed: amountOwed,
+          split_ratio: share,
+        });
+      }
+      break;
+    }
+
+    case 'PERCENTAGE': {
+      let totalPaidAmount = 0;
+
+      users.forEach(user => {
+        totalPaidAmount += (user.percentage / 100) * amount;
+      });
+
+      const splitRatio = totalPaidAmount / users.length;
+
+      users.forEach(user => {
+        if (user.percentage < 0 || user.percentage > 100) {
+          throw new Error('Percentage must be between 0 and 100.');
+        }
+
+        const amountPaid = (user.percentage / 100) * amount;
+        const amountOwed = splitRatio - amountPaid;
+
+        splits.push({
+          expense_id: expense.id,
+          user_id: user.userId,
+          amount_paid: amountPaid,
+          amount_owed: amountOwed,
+          split_ratio: splitRatio,
+        });
+      });
+
+      if (Math.abs(totalPaidAmount - amount) > 0.01) {
+        throw new Error(
+          'The total percentage paid must match the total expense.',
+        );
+      }
+      break;
+    }
+
+    case 'SHARES': {
+      const totalShares = users.reduce((sum, user) => sum + user.shares, 0);
+      if (totalShares <= 0)
+        throw new Error('Total shares must be greater than zero.');
+
+      users.forEach(user => {
+        const amountPaid = (user.shares / totalShares) * amount;
+
+        splits.push({
+          expense_id: expense.id,
+          user_id: user.userId,
+          amount_paid: amountPaid,
+          amount_owed: 0,
+          split_ratio: user.shares,
+        });
+      });
+      break;
+    }
+
+    case 'UNEQUAL': {
+      let totalPaid = 0;
+
+      users.forEach(user => {
+        totalPaid += user.amountPaid;
+      });
+
+      if (Math.abs(totalPaid - amount) > 0.01) {
+        throw new Error(
+          'The total amount paid must match the total expense amount.',
+        );
+      }
+
+      users.forEach(user => {
+        const splitRatio = amount / users.length;
+        const amountOwed = splitRatio - user.amountPaid;
+
+        splits.push({
+          expense_id: expense.id,
+          user_id: user.userId,
+          amount_paid: user.amountPaid,
+          amount_owed: amountOwed,
+          split_ratio: splitRatio,
+        });
+      });
+      break;
+    }
+
+    default:
+      throw new Error('Invalid split type');
+  }
+
+  // insert the new splits
+  await ExpenseSplit.bulkCreate(splits);
 
   return expense;
 };
@@ -175,16 +345,18 @@ const settleUpService = async (
     throw new Error('User balances not found for settlement.');
   }
 
-  // new balances after settlement
   let newPayerBalance = parseFloat(payerExpense.amount_owed) - amount;
-
-  // if (newPayerBalance < 0) {
-  //   throw new Error('Insufficient balance for settlement.');
-  // }
+  let newPayeeBalance =
+    (parseFloat(payeeExpense.amount_owed) || 0) + parseFloat(amount);
 
   await ExpenseSplit.update(
     { amount_owed: newPayerBalance },
-    { where: { user_id: payerId } },
+    { where: { user_id: payerId }, expense_id: expenseId },
+  );
+
+  await ExpenseSplit.update(
+    { amount_owed: newPayeeBalance },
+    { where: { user_id: payeeId }, expense_id: expenseId },
   );
 
   console.log('group id in console: ', groupId);
@@ -194,6 +366,7 @@ const settleUpService = async (
     payee_id: payeeId,
     amount,
     group_id: groupId,
+    status: 'Completed',
   });
 
   return {

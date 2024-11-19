@@ -11,19 +11,15 @@ const {
   deleteCommentService,
 } = require('../services/expenses.service.js');
 
-const { uploadFileToS3 } = require('../helpers/aws.helper.js');
-
 const createExpense = async (req, res) => {
   const { groupId } = req.query;
   const { amount, description, splitType, users } = req.body;
-  const payerId = req.user.id;
 
   console.log(groupId, amount, description, splitType);
 
   try {
     const expense = await createExpenseService(
       groupId,
-      payerId,
       amount,
       description,
       splitType,
@@ -57,25 +53,43 @@ const getExpenseDetails = async (req, res) => {
 
 const updateExpense = async (req, res) => {
   try {
-    const expenseData = req.body;
+    const expenseId = req.params.expenseId;
 
-    if (req.url) {
-      console.log(req.url);
+    //parse the form-data and organize into an object
+    const { description, amount, split_type } = req.body;
 
-      const image = await uploadFileToS3(req.url);
-      console.log(image);
-      expenseData.expense_image_url = image;
+    // parse users from form-data
+    const users = [];
+    for (let i = 0; req.body[`users[${i}].userId`]; i++) {
+      users.push({
+        userId: req.body[`users[${i}].userId`],
+        percentage: parseFloat(req.body[`users[${i}].percentage`] || 0),
+        shares: parseFloat(req.body[`users[${i}].shares`] || 0),
+        amountPaid: parseFloat(req.body[`users[${i}].amountPaid`] || 0),
+      });
     }
 
-    const updatedExpense = await updateExpenseService(
-      req.params.expenseId,
-      expenseData,
-    );
-    res.status(200).json(updatedExpense);
+    if (!users || users.length === 0) {
+      return res.status(400).json({ message: 'No users data provided' });
+    }
+
+    const updatedExpense = await updateExpenseService({
+      expenseId,
+      description,
+      amount,
+      split_type,
+      users,
+    });
+
+    res
+      .status(200)
+      .json({ message: 'Expense updated successfully', updatedExpense });
   } catch (error) {
     res.json({ message: error.message });
   }
 };
+
+module.exports = { updateExpense };
 
 const deleteExpense = async (req, res) => {
   try {
