@@ -1,6 +1,5 @@
 const {
   User,
-  Expense,
   ExpenseSplit,
   FriendList,
   Payment,
@@ -48,6 +47,21 @@ const addFriendService = async (friend_one, friend_two) => {
   console.log('friend_one:', friend_one);
   console.log('friend_two:', friend_two);
 
+  const existingFriendship = await FriendList.findOne({
+    where: Op.or(
+      Op.literal(
+        `"friend_one" = CAST('${friend_one}' AS UUID) AND "friend_two" = CAST('${friend_two}' AS UUID)`,
+      ),
+      Op.literal(
+        `"friend_one" = CAST('${friend_two}' AS UUID) AND "friend_two" = CAST('${friend_one}' AS UUID)`,
+      ),
+    ),
+  });
+
+  if (existingFriendship) {
+    throw new Error('Friendship already exists');
+  }
+
   const newFriendship = await FriendList.create({ friend_one, friend_two });
   return newFriendship;
 };
@@ -85,29 +99,32 @@ const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
 
 const generateExpenseReportService = async userId => {
   try {
-    const totalExpenses = await Expense.findAll({
-      where: { payer_id: userId },
+    const totalPaid = await ExpenseSplit.findAll({
+      where: { user_id: userId },
       attributes: [
-        [Sequelize.fn('sum', Sequelize.col('amount')), 'totalExpenses'],
+        [Sequelize.fn('sum', Sequelize.col('amount_paid')), 'totalPaid'],
       ],
       raw: true,
     });
 
-    const totalPayments = await Payment.findAll({
-      where: { payer_id: userId },
+    const totalOwed = await ExpenseSplit.findAll({
+      where: { user_id: userId },
       attributes: [
-        [Sequelize.fn('sum', Sequelize.col('amount')), 'totalPayments'],
+        [Sequelize.fn('sum', Sequelize.col('amount_owed')), 'totalOwed'],
       ],
       raw: true,
     });
 
-    const balance =
-      (totalExpenses[0].totalExpenses || 0) -
-      (totalPayments[0].totalPayments || 0);
+    console.log('Total Paid:', totalPaid);
+    console.log('Total Owed:', totalOwed);
+
+    const totalPaidAmount = parseFloat(totalPaid[0].totalPaid || 0);
+    const totalOwedAmount = parseFloat(totalOwed[0].totalOwed || 0);
+    const balance = totalPaidAmount - totalOwedAmount;
 
     return {
-      totalExpenses: totalExpenses[0].totalExpenses || 0,
-      totalPayments: totalPayments[0].totalPayments || 0,
+      totalPaid: totalPaidAmount,
+      totalOwed: totalOwedAmount,
       balance,
     };
   } catch (error) {

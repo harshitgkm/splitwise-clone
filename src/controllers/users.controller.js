@@ -12,26 +12,25 @@ const {
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
 
-const getUserProfile = async (req, res) => {
+const getUserProfile = async (req, res, next) => {
   try {
     console.log('hello');
     const userId = req.user.id;
     const user = await getUserById(userId);
-    res.json(user);
-    console.log('after try of getUserProfile');
+    res.data = user;
+    next();
   } catch (error) {
     res.json({ error: error.message });
   }
 };
 
-const updateUserProfile = async (req, res) => {
+const updateUserProfile = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const updatedData = req.body;
 
     if (req.file) {
       console.log('File uploaded:', req.file);
-
       const imageUrl = await uploadFileToS3(req.file);
       console.log('imageUrl', imageUrl);
       updatedData.profile_picture_url = imageUrl;
@@ -39,28 +38,30 @@ const updateUserProfile = async (req, res) => {
 
     console.log(req.file);
     const updatedUser = await updateUser(userId, updatedData);
-    res.json(updatedUser);
+    res.data = updatedUser;
+    next();
   } catch (error) {
     res.json({ error: error.message });
   }
 };
 
-const getOutstandingBalance = async (req, res) => {
+const getOutstandingBalance = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const balance = await calculateOutstandingBalance(userId);
-    res.status(200).json({ outstandingBalance: balance });
+    console.log(balance);
+    res.data = balance;
+
+    next();
   } catch (error) {
     console.log(error);
     res.json({ error: 'Failed to fetch outstanding balance.' });
   }
 };
 
-const addFriend = async (req, res) => {
+const addFriend = async (req, res, next) => {
   const userId = req.user.id;
   const { friend_two } = req.body;
-
-  console.log('hello');
 
   if (!friend_two || userId === friend_two) {
     return res.status(400).json({ message: 'Invalid friend IDs provided' });
@@ -68,62 +69,59 @@ const addFriend = async (req, res) => {
 
   try {
     const newFriendship = await addFriendService(userId, friend_two);
-    res.status(201).json({
-      message: 'Friend added successfully',
-      friendship: newFriendship,
-    });
+    res.data = newFriendship;
+    next();
   } catch (error) {
     console.error('Error adding friend:', error);
     res.json({ error: error.message });
   }
 };
 
-const getFriendsList = async (req, res) => {
+const getFriendsList = async (req, res, next) => {
   const userId = req.user.id;
   const { page = 1, limit = 10 } = req.query;
 
   try {
     const friendsList = await getFriends(userId, page, limit);
-    console.log(friendsList);
-    res.status(200).json({ friends: friendsList });
+    res.data = friendsList;
+    next();
   } catch (err) {
     console.error(err);
     res.json({ error: err.message });
   }
 };
 
-const getAllPaymentsForUser = async (req, res) => {
-  const { userId } = req.params;
+const getAllPaymentsForUser = async (req, res, next) => {
+  const userId = req.user.id;
   const { page = 1, limit = 10 } = req.query;
 
   try {
     const payments = await getAllPaymentsService(userId, page, limit);
-    return res.status(200).json(payments);
+    res.data = payments;
+    next();
   } catch (err) {
     res.json({ error: err.message });
   }
 };
 
-const generateExpenseReport = async (req, res) => {
+const generateExpenseReport = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const reportData = await generateExpenseReportService(userId);
-    res.status(200).json({ success: true, data: reportData });
+    res.data = reportData;
+    console.log('repot');
+    next();
   } catch (error) {
     res.json({ error: error.message });
   }
 };
 
-const exportReportToPDF = async (req, res) => {
+const exportReportToPDF = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const s3Url = await generatePDFAndUploadToS3(userId);
-
-    res.status(200).json({
-      success: true,
-      message: 'Report generated and saved to S3 successfully',
-      url: s3Url,
-    });
+    res.data = s3Url;
+    next();
   } catch (error) {
     res.json({
       error: error.message,
@@ -131,14 +129,14 @@ const exportReportToPDF = async (req, res) => {
   }
 };
 
-const getAllReports = async (req, res) => {
+const getAllReports = async (req, res, next) => {
   const userId = req.user.id;
   const { page = 1, limit = 10 } = req.query;
 
   try {
     const reports = await getReportsService(userId, page, limit);
-
-    return res.status(200).json(reports);
+    res.data = reports;
+    next();
   } catch (error) {
     return res.json({ error: error.message });
   }
