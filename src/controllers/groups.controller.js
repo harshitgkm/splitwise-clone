@@ -11,37 +11,35 @@ const {
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
 
-const createGroup = async (req, res) => {
+const createGroup = async (req, res, next) => {
   try {
     const groupData = req.body;
     const userId = req.user.id;
 
     const group = await createGroupService(userId, groupData);
-
-    console.log(group);
-
-    res.status(201).json({ message: 'Group created successfully', group });
+    res.data = group;
+    next();
   } catch (error) {
     console.error(error);
     res.json({ message: 'Error creating group' });
   }
 };
 
-const getGroups = async (req, res) => {
+const getGroups = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { page = 1, limit = 10 } = req.query;
 
     const groups = await getGroupsService(userId, page, limit);
-
-    res.status(200).json(groups);
+    res.data = groups;
+    next();
   } catch (error) {
     console.error(error);
     res.json({ message: 'Error retrieving groups' });
   }
 };
 
-const updateGroup = async (req, res) => {
+const updateGroup = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { groupId } = req.params;
@@ -56,27 +54,29 @@ const updateGroup = async (req, res) => {
     }
 
     const group = await updateGroupService(userId, groupId, groupData);
-    res.status(200).json({ message: 'Group updated successfully', group });
+    res.data = group;
+    next();
   } catch (error) {
     console.error(error);
     res.json({ message: error.message || 'Error updating group' });
   }
 };
 
-const deleteGroup = async (req, res) => {
+const deleteGroup = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { groupId } = req.params;
 
-    await deleteGroupService(userId, groupId);
-    res.status(200).json({ message: 'Group deleted successfully' });
+    const response = await deleteGroupService(userId, groupId);
+    res.data = response;
+    next();
   } catch (error) {
     console.error(error);
     res.json({ message: error.message || 'Error deleting group' });
   }
 };
 
-const addMemberToGroup = async (req, res) => {
+const addMemberToGroup = async (req, res, next) => {
   try {
     const { groupId } = req.params;
     const { userId, isAdmin } = req.body; // `userId` is the ID of the user to add, `isAdmin` is optional
@@ -88,47 +88,50 @@ const addMemberToGroup = async (req, res) => {
       userId,
       isAdmin,
     );
-    res
-      .status(200)
-      .json({ message: 'User added to group successfully', data: result });
+
+    res.data = result;
+    next();
   } catch (error) {
     console.error(error);
     res.json({ message: error.message || 'Error adding user to group' });
   }
 };
 
-const leaveGroup = async (req, res) => {
+const leaveGroup = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { groupId } = req.params;
 
-    await leaveGroupService(userId, groupId);
-    res.status(200).json({ message: 'You have left the group' });
+    const response = await leaveGroupService(userId, groupId);
+    res.data = response;
+    next();
   } catch (error) {
     console.error(error);
     res.json({ message: error.message || 'Error leaving group' });
   }
 };
 
-const removeUser = async (req, res) => {
+const removeUser = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { groupId, userId: targetUserId } = req.params;
 
-    await removeUserService(userId, groupId, targetUserId);
-    res.status(200).json({ message: 'User removed from the group' });
+    const response = await removeUserService(userId, groupId, targetUserId);
+    res.data = response;
+    next();
   } catch (error) {
     console.error(error);
     res.json({ message: error.message || 'Error removing user from group' });
   }
 };
 
-const getAllPaymentsForGroup = async (req, res) => {
+const getAllPaymentsForGroup = async (req, res, next) => {
   const { groupId } = req.params;
 
   try {
     const payments = await getAllPaymentsInGroupService(groupId);
-    return res.status(200).json(payments);
+    res.data = payments;
+    next();
   } catch (error) {
     res.json({ message: error.message || 'Error getting payments' });
   }

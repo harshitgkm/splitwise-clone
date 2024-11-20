@@ -15,6 +15,7 @@ const {
 const { verifyToken } = require('../middlewares/auth.middleware.js');
 
 const { checkGroupAdmin } = require('../middlewares/groups.middleware.js');
+
 const upload = require('../middlewares/multer.middleware.js');
 
 const {
@@ -22,9 +23,26 @@ const {
   updateGroupValidator,
 } = require('../validators/groups.validator');
 
-router.post('/', createGroupValidator, verifyToken, createGroup);
+const {
+  createGroupSerializer,
+  getGroupsSerializer,
+  updateGroupSerializer,
+  deleteGroupSerializer,
+  addMemberToGroupSerializer,
+  leaveGroupSerializer,
+  removeUserSerializer,
+  getAllPaymentsForGroupSerializer,
+} = require('../serializers/groups.serializer.js');
 
-router.get('/', verifyToken, getGroups);
+router.post(
+  '/',
+  createGroupValidator,
+  verifyToken,
+  createGroup,
+  createGroupSerializer,
+);
+
+router.get('/', verifyToken, getGroups, getGroupsSerializer);
 
 router.put(
   '/:groupId',
@@ -33,26 +51,40 @@ router.put(
   checkGroupAdmin,
   upload.single('group_profile_url'),
   updateGroup,
+  updateGroupSerializer,
 );
 
-router.delete('/:groupId', verifyToken, checkGroupAdmin, deleteGroup);
+router.delete(
+  '/:groupId',
+  verifyToken,
+  checkGroupAdmin,
+  deleteGroup,
+  deleteGroupSerializer,
+);
 
 router.post(
   '/:groupId/addMember',
   verifyToken,
   checkGroupAdmin,
   addMemberToGroup,
+  addMemberToGroupSerializer,
 );
 
-router.post('/:groupId/leave', verifyToken, leaveGroup);
+router.post('/:groupId/leave', verifyToken, leaveGroup, leaveGroupSerializer);
 
 router.delete(
   '/:groupId/:userId/remove',
   verifyToken,
   checkGroupAdmin,
   removeUser,
+  removeUserSerializer,
 );
 
-router.get('/:groupId/payments', verifyToken, getAllPaymentsForGroup);
+router.get(
+  '/:groupId/payments',
+  verifyToken,
+  getAllPaymentsForGroup,
+  getAllPaymentsForGroupSerializer,
+);
 
 module.exports = router;
