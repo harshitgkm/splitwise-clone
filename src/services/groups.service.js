@@ -43,17 +43,18 @@ const getGroupsService = async (
 
     for (let member of groupMembers) {
       try {
-        const group = await Group.findByPk(member.group_id);
+        const group = await Group.findByPk(member.group_id, {
+          attributes: ['id', 'name', 'type', 'profile_image_url'],
+        });
 
         if (group) {
           if (filter === 'all' || filter === 'owe' || filter === 'owed') {
-            if (filter === 'all' || filter === 'owe' || filter === 'owed') {
-              groups.push({
-                groupId: group.id,
-                groupName: group.name,
-                groupType: group.type,
-              });
-            }
+            groups.push({
+              groupId: group.id,
+              groupName: group.name,
+              groupType: group.type,
+              profileImageUrl: group.profile_image_url || null,
+            });
           }
         } else {
           console.warn(`Group not found for group_member: ${member.group_id}`);

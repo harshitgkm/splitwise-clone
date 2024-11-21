@@ -9,7 +9,6 @@ const {
   addMemberToGroup,
   leaveGroup,
   removeUser,
-  getAllPaymentsForGroup,
 } = require('../controllers/groups.controller.js');
 
 const { verifyToken } = require('../middlewares/auth.middleware.js');
@@ -31,7 +30,6 @@ const {
   addMemberToGroupSerializer,
   leaveGroupSerializer,
   removeUserSerializer,
-  getAllPaymentsForGroupSerializer,
 } = require('../serializers/groups.serializer.js');
 
 router.post(
@@ -63,7 +61,7 @@ router.delete(
 );
 
 router.post(
-  '/:groupId/addMember',
+  '/:groupId/add-member',
   verifyToken,
   checkGroupAdmin,
   addMemberToGroup,
@@ -73,18 +71,18 @@ router.post(
 router.post('/:groupId/leave', verifyToken, leaveGroup, leaveGroupSerializer);
 
 router.delete(
-  '/:groupId/:userId/remove',
+  '/:groupId/users/:userId',
   verifyToken,
   checkGroupAdmin,
   removeUser,
   removeUserSerializer,
 );
 
-router.get(
-  '/:groupId/payments',
-  verifyToken,
-  getAllPaymentsForGroup,
-  getAllPaymentsForGroupSerializer,
-);
+// router.get(
+//   '/:groupId/payments',
+//   verifyToken,
+//   getAllPaymentsForGroup,
+//   getAllPaymentsForGroupSerializer,
+// );
 
 module.exports = router;

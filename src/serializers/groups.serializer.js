@@ -16,15 +16,13 @@ const createGroupSerializer = (req, res) => {
 
 const getGroupsSerializer = (req, res) => {
   const receivedData = res.data || [];
-  console.log(receivedData);
+  console.log('Received Data:', receivedData);
+
   const resultData = receivedData.map(group => ({
-    groupId: group.group_id,
-    userId: group.user_id,
-    name: group.name,
-    type: group.type,
-    profileImageUrl: group.profile_image_url,
-    isAdmin: group.is_admin,
-    joinedAt: group.joined_at,
+    groupId: group.groupId,
+    name: group.groupName,
+    type: group.groupType,
+    profileImageUrl: group.profileImageUrl || null,
   }));
 
   res.status(200).json(resultData);
@@ -88,7 +86,6 @@ const getAllPaymentsForGroupSerializer = (req, res) => {
   const receivedData = res.data || [];
   const resultData = receivedData.map(payment => ({
     id: payment.id,
-    groupId: payment.group_id,
     payerId: payment.payer_id,
     payeeId: payment.payee_id,
     amount: payment.amount,

@@ -28,9 +28,9 @@ const createGroup = async (req, res, next) => {
 const getGroups = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 20, filter = 'all' } = req.query;
 
-    const groups = await getGroupsService(userId, page, limit);
+    const groups = await getGroupsService(userId, page, limit, filter);
     res.data = groups;
     next();
   } catch (error) {
@@ -79,7 +79,7 @@ const deleteGroup = async (req, res, next) => {
 const addMemberToGroup = async (req, res, next) => {
   try {
     const { groupId } = req.params;
-    const { userId, isAdmin } = req.body; // `userId` is the ID of the user to add, `isAdmin` is optional
+    const { userId, isAdmin } = req.body;
     const currentUserId = req.user.id;
 
     const result = await addGroupMember(
