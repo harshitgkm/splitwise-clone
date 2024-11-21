@@ -36,10 +36,11 @@ const updateUserProfile = async (req, res, next) => {
     }
 
     console.log(req.file);
-    const updatedUser = await updateUser(req.params.userId, updatedData);
+    const updatedUser = await updateUser(req.params.id, updatedData);
     res.data = updatedUser;
     next();
   } catch (error) {
+    console.log(error);
     res.json({ error: error.message });
   }
 };
