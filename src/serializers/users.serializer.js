@@ -34,21 +34,22 @@ const addFriendSerializer = (req, res) => {
 
   if (receivedData) {
     resultData = {
-      id: receivedData.dataValues.id,
-      friendOne: receivedData.dataValues.friend_one,
-      friendTwo: receivedData.dataValues.friend_two,
+      message: receivedData.message || 'Friendship created successfully',
+      friend: receivedData.friend || '',
     };
   }
+
   res.json(resultData);
 };
 
 const getFriendsListSerializer = (req, res) => {
-  const receivedData = res.data || [];
-  const resultData = receivedData.map(friend => ({
-    id: friend.id,
-    friendOne: friend.friend_one,
-    friendTwo: friend.friend_two,
-  }));
+  let receivedData = res.data || [];
+  let resultData = {};
+  if (receivedData) {
+    resultData = {
+      friends: receivedData,
+    };
+  }
 
   res.json(resultData);
 };
@@ -70,16 +71,39 @@ const getAllPaymentsSerializer = (req, res) => {
 
 const generateExpenseReportSerializer = (req, res) => {
   const receivedData = res.data || {};
-  console.log('receivedData', receivedData);
-  const resultData = {
-    totalExpenses: receivedData.totalPaid || 0,
-    totalPayments: receivedData.totalOwed || 0,
-    balance: receivedData.balance || 0,
-  };
+  let resultData = {};
 
-  res.json(resultData);
+  if (receivedData) {
+    resultData = {
+      totalPaid: receivedData.totalPaid || 0,
+      totalOwed: receivedData.totalOwed || 0,
+      paymentRecords:
+        receivedData.paymentRecords?.map(payment => ({
+          amountPaid: payment.amountPaid || 0,
+          amountOwed: payment.amountOwed || 0,
+          expenseDescription: payment.expenseDescription || 'Unknown',
+          groupName: payment.groupName || 'No Group',
+          createdAt: payment.createdAt || null,
+        })) || [],
+      userExpenses:
+        receivedData.userExpenses?.map(expense => ({
+          id: expense.id || '',
+          description: expense.description || '',
+          amount: expense.amount || 0,
+          createdAt: expense.createdAt || null,
+          groupName: expense.groupName || 'No Group',
+          splits:
+            expense.splits?.map(split => ({
+              amountPaid: split.amountPaid || 0,
+              amountOwed: split.amountOwed || 0,
+              splitRatio: split.splitRatio || 0,
+            })) || [],
+        })) || [],
+    };
+  }
+
+  res.status(200).json(resultData);
 };
-
 const exportReportToPDFSerializer = (req, res) => {
   const receivedData = res.data || {};
   const resultData = {
@@ -93,10 +117,8 @@ const getAllReportsSerializer = (req, res) => {
   const receivedData = res.data || [];
   const resultData = receivedData.map(report => ({
     id: report.id,
-    userId: report.user_id,
     reportUrl: report.report_url,
     createdAt: report.created_at,
-    updatedAt: report.updated_at,
   }));
 
   res.json(resultData);

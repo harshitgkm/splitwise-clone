@@ -26,7 +26,6 @@ const getUserProfile = async (req, res, next) => {
 
 const updateUserProfile = async (req, res, next) => {
   try {
-    const userId = req.user.id;
     const updatedData = req.body;
 
     if (req.file) {
@@ -37,7 +36,7 @@ const updateUserProfile = async (req, res, next) => {
     }
 
     console.log(req.file);
-    const updatedUser = await updateUser(userId, updatedData);
+    const updatedUser = await updateUser(req.params.userId, updatedData);
     res.data = updatedUser;
     next();
   } catch (error) {
@@ -61,7 +60,7 @@ const getOutstandingBalance = async (req, res, next) => {
 
 const addFriend = async (req, res, next) => {
   const userId = req.user.id;
-  const { friend_two } = req.body;
+  const { id: friend_two } = req.body;
 
   if (!friend_two || userId === friend_two) {
     return res.status(400).json({ message: 'Invalid friend IDs provided' });
@@ -79,7 +78,7 @@ const addFriend = async (req, res, next) => {
 
 const getFriendsList = async (req, res, next) => {
   const userId = req.user.id;
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 20 } = req.query;
 
   try {
     const friendsList = await getFriends(userId, page, limit);
@@ -109,7 +108,6 @@ const generateExpenseReport = async (req, res, next) => {
     const userId = req.user.id;
     const reportData = await generateExpenseReportService(userId);
     res.data = reportData;
-    console.log('repot');
     next();
   } catch (error) {
     res.json({ error: error.message });
