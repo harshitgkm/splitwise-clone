@@ -43,7 +43,7 @@ router.post(
 router.get('/', verifyToken, getGroups, getGroupsSerializer);
 
 router.put(
-  '/:groupId',
+  '/:id',
   updateGroupValidator,
   verifyToken,
   checkGroupAdmin,
@@ -53,7 +53,7 @@ router.put(
 );
 
 router.delete(
-  '/:groupId',
+  '/:id',
   verifyToken,
   checkGroupAdmin,
   deleteGroup,
@@ -61,17 +61,17 @@ router.delete(
 );
 
 router.post(
-  '/:groupId/add-member',
+  '/:id/add-member',
   verifyToken,
   checkGroupAdmin,
   addMemberToGroup,
   addMemberToGroupSerializer,
 );
 
-router.post('/:groupId/leave', verifyToken, leaveGroup, leaveGroupSerializer);
+router.post('/:id/leave', verifyToken, leaveGroup, leaveGroupSerializer);
 
 router.delete(
-  '/:groupId/users/:userId',
+  '/:id/users/:userId',
   verifyToken,
   checkGroupAdmin,
   removeUser,

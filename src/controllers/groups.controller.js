@@ -42,7 +42,7 @@ const getGroups = async (req, res, next) => {
 const updateGroup = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { groupId } = req.params;
+    const id = req.params.id;
     const groupData = req.body;
 
     if (req.url) {
@@ -53,7 +53,7 @@ const updateGroup = async (req, res, next) => {
       groupData.profile_image_url = image;
     }
 
-    const group = await updateGroupService(userId, groupId, groupData);
+    const group = await updateGroupService(userId, id, groupData);
     res.data = group;
     next();
   } catch (error) {
@@ -65,9 +65,9 @@ const updateGroup = async (req, res, next) => {
 const deleteGroup = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { groupId } = req.params;
+    const { id } = req.params;
 
-    const response = await deleteGroupService(userId, groupId);
+    const response = await deleteGroupService(userId, id);
     res.data = response;
     next();
   } catch (error) {
@@ -78,16 +78,11 @@ const deleteGroup = async (req, res, next) => {
 
 const addMemberToGroup = async (req, res, next) => {
   try {
-    const { groupId } = req.params;
+    const { id } = req.params;
     const { userId, isAdmin } = req.body;
     const currentUserId = req.user.id;
 
-    const result = await addGroupMember(
-      groupId,
-      currentUserId,
-      userId,
-      isAdmin,
-    );
+    const result = await addGroupMember(id, currentUserId, userId, isAdmin);
 
     res.data = result;
     next();
@@ -100,9 +95,9 @@ const addMemberToGroup = async (req, res, next) => {
 const leaveGroup = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { groupId } = req.params;
+    const { id } = req.params;
 
-    const response = await leaveGroupService(userId, groupId);
+    const response = await leaveGroupService(userId, id);
     res.data = response;
     next();
   } catch (error) {
@@ -114,7 +109,7 @@ const leaveGroup = async (req, res, next) => {
 const removeUser = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { groupId, userId: targetUserId } = req.params;
+    const { id: groupId, userId: targetUserId } = req.params;
 
     const response = await removeUserService(userId, groupId, targetUserId);
     res.data = response;
