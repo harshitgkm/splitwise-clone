@@ -156,7 +156,7 @@ paths:
           description: Unauthorized
 
   /auth/logout:
-    post:
+    delete:
       tags:
         - Auth
       summary: Log out a user
