@@ -82,12 +82,6 @@ const createExpenseService = async (
             split_ratio: splitRatio,
           });
         }
-
-        if (Math.abs(totalPaidAmount - totalExpense) > 0.01) {
-          throw new Error(
-            'The total paid amount must match the total expense.',
-          );
-        }
       }
       break;
 
@@ -120,13 +114,8 @@ const createExpenseService = async (
         let totalPaid = 0;
 
         users.forEach(user => {
-          totalPaid += user.amount_paid;
+          totalPaid = totalPaid + user.amount_paid;
         });
-        if (totalPaid !== amount) {
-          throw new Error(
-            'The total amount paid must equal the total expense amount.',
-          );
-        }
 
         for (const user of users) {
           const { userId, amountPaid } = user;
@@ -173,9 +162,75 @@ const getAllExpensesService = async (groupId, page = 1, limit = 10) => {
 const getExpenseDetailsService = async expenseId => {
   const expense = await Expense.findOne({
     where: { id: expenseId },
+    include: [
+      {
+        model: ExpenseSplit,
+        as: 'expenseSplits',
+        attributes: ['user_id', 'amount_paid', 'amount_owed', 'split_ratio'],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['username'],
+          },
+        ],
+      },
+    ],
   });
+
   if (!expense) throw new Error('Expense not found');
-  return expense;
+
+  const expenseSplits = expense.expenseSplits.map(split => ({
+    user_id: split.user_id,
+    amount_paid: split.amount_paid,
+    amount_owed: split.amount_owed,
+    split_ratio: split.split_ratio,
+    username: split.user.username,
+  }));
+
+  const payers = [];
+  const oweDetails = [];
+
+  const totalPaid = expenseSplits.reduce(
+    (sum, split) => sum + parseFloat(split.amount_paid),
+    0,
+  );
+
+  //calculate who owes whom based on the amount paid and the total amount
+  expenseSplits.forEach(split => {
+    const share = totalPaid / expenseSplits.length;
+    if (parseFloat(split.amount_paid) > share) {
+      payers.push({
+        user_id: split.user_id,
+        amount_paid: split.amount_paid,
+        username: split.username,
+        split_ratio: split.split_ratio,
+      });
+    }
+
+    // check if user owes anyone (those who paid more than their share)
+    if (parseFloat(split.amount_owed) > 0) {
+      //find out who owes to whom (overpaid users, i.e., payers)
+      payers.forEach(payer => {
+        if (payer.username !== split.username) {
+          const amountOwed = share - parseFloat(split.amount_paid);
+          if (amountOwed > 0) {
+            oweDetails.push({
+              payer: split.username, //one who paid less
+              oweTo: payer.username, //one who paid more
+              amount: amountOwed.toFixed(2),
+            });
+          }
+        }
+      });
+    }
+  });
+
+  return {
+    ...expense.toJSON(),
+    expenseSplits,
+    oweDetails,
+  };
 };
 
 const updateExpenseService = async ({
@@ -192,7 +247,7 @@ const updateExpenseService = async ({
   if (amount) expense.amount = parseFloat(amount);
   if (split_type) expense.split_type = split_type;
 
-  // save the updated expense
+  // save updated expense
   await expense.save();
 
   // delete old splits
@@ -310,7 +365,7 @@ const updateExpenseService = async ({
       throw new Error('Invalid split type');
   }
 
-  // insert the new splits
+  //insert the new splits
   await ExpenseSplit.bulkCreate(splits);
 
   return expense;
@@ -324,57 +379,59 @@ const deleteExpenseService = async expenseId => {
   await expense.destroy();
 };
 
-const settleUpService = async (
-  payerId,
-  payeeId,
-  amount,
-  expenseId,
-  groupId,
-) => {
-  const payerExpense = await ExpenseSplit.findOne({
-    where: { user_id: payerId, expense_id: expenseId },
-  });
+const settleUpService = async (payerId, payeeId, amount, expenseId) => {
+  try {
+    const payerExpense = await ExpenseSplit.findOne({
+      where: { user_id: payerId, expense_id: expenseId },
+    });
 
-  console.log(payerExpense);
+    const payeeExpense = await ExpenseSplit.findOne({
+      where: { user_id: payeeId, expense_id: expenseId },
+    });
 
-  const payeeExpense = await ExpenseSplit.findOne({
-    where: { user_id: payeeId, expense_id: expenseId },
-  });
+    if (!payerExpense || !payeeExpense) {
+      throw new Error('User balances not found for settlement.');
+    }
 
-  if (!payerExpense || !payeeExpense) {
-    throw new Error('User balances not found for settlement.');
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount)) {
+      throw new Error('Invalid amount specified.');
+    }
+
+    if (parseFloat(payerExpense.amount_owed) !== parsedAmount) {
+      throw new Error('The amount to settle must match the amount owed.');
+    }
+
+    let newPayerBalance = parseFloat(payerExpense.amount_owed) - parsedAmount;
+    let newPayeeBalance = parseFloat(payeeExpense.amount_owed) + parsedAmount;
+
+    await ExpenseSplit.update(
+      { amount_owed: newPayerBalance },
+      { where: { user_id: payerId, expense_id: expenseId } },
+    );
+
+    await ExpenseSplit.update(
+      { amount_owed: newPayeeBalance },
+      { where: { user_id: payeeId, expense_id: expenseId } },
+    );
+
+    const payment = await Payment.create({
+      payer_id: payerId,
+      payee_id: payeeId,
+      amount: parsedAmount,
+      status: 'Completed',
+      expense_id: expenseId,
+    });
+
+    return {
+      payerId,
+      payeeId,
+      payment,
+    };
+  } catch (error) {
+    console.error('Error in settleUpService:', error.message);
+    throw error;
   }
-
-  let newPayerBalance = parseFloat(payerExpense.amount_owed) - amount;
-  let newPayeeBalance =
-    (parseFloat(payeeExpense.amount_owed) || 0) + parseFloat(amount);
-
-  await ExpenseSplit.update(
-    { amount_owed: newPayerBalance },
-    { where: { user_id: payerId }, expense_id: expenseId },
-  );
-
-  await ExpenseSplit.update(
-    { amount_owed: newPayeeBalance },
-    { where: { user_id: payeeId }, expense_id: expenseId },
-  );
-
-  console.log('group id in console: ', groupId);
-
-  const payment = await Payment.create({
-    payer_id: payerId,
-    payee_id: payeeId,
-    amount,
-    group_id: groupId,
-    status: 'Completed',
-  });
-
-  return {
-    payerId,
-    payeeId,
-    newPayerBalance,
-    payment,
-  };
 };
 
 const createCommentService = async ({ expenseId, userId, comment }) => {

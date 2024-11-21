@@ -52,7 +52,6 @@ const updateExpenseValidator = (req, res, next) => {
 
 const settleUpValidator = (req, res, next) => {
   const schema = Joi.object({
-    groupId: Joi.string().uuid().required(),
     payerId: Joi.string().uuid().required(),
     payeeId: Joi.string().uuid().required(),
     amount: Joi.number().precision(2).positive().required(),
