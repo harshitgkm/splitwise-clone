@@ -1,8 +1,8 @@
 openapi: 3.0.0
 info:
-  title: Groups API
-  description: API for managing groups, including creating, updating, and managing members, payments, and reports.
+  title: Group Management API
   version: 1.0.0
+  description: API for managing groups, including creating, updating, and managing members.
 
 servers:
   - url: http://localhost:3000/api
@@ -10,7 +10,7 @@ servers:
 
 tags:
   - name: Groups
-    description: Endpoints for managing groups and their members
+    description: Operations related to groups
 
 paths:
   /groups:
@@ -18,68 +18,86 @@ paths:
       tags:
         - Groups
       summary: Create a new group
-      description: Create a new group with the authenticated user as the admin.
+      security:
+        - bearerAuth: []
       requestBody:
-        description: The group data to be created
+        required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - name
-                - type
               properties:
                 name:
                   type: string
-                  example: 'Friends Trip'
+                  description: Name of the group
+                  example: "Friends' Trip"
                 type:
                   type: string
-                  example: 'private'
+                  description: Type of the group (e.g., personal, travel)
+                  example: travel
                 profile_image_url:
                   type: string
-                  example: 'https://s3.amazonaws.com/bucket-name/path/to/image.jpg'
-      security:
-        - bearerAuth: []
+                  description: Profile image URL for the group
+                  example: 'https://example.com/group-profile.png'
       responses:
         201:
-          description: Group created successfully.
+          description: Group created successfully
           content:
             application/json:
-        400:
-          description: Invalid request data.
+              schema:
 
+        400:
+          description: Bad request
+        500:
+          description: Internal server error
     get:
       tags:
         - Groups
-      summary: Get all groups of the authenticated user
-      description: Retrieve all groups that the authenticated user is a member of.
+      summary: Get all groups for the authenticated user
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number for pagination
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of results per page
+          example: 10
       responses:
         200:
           description: List of groups
           content:
             application/json:
-              type: array
-        401:
-          description: Unauthorized. Token is missing or invalid.
+              schema:
+                type: array
+                items:
 
-  /groups/{groupId}:
+        500:
+          description: Internal server error
+
+  /groups/{id}:
     put:
       tags:
         - Groups
-      summary: Update group information
-      description: Update the details of an existing group.
+      summary: Update a group
+      security:
+        - bearerAuth: []
       parameters:
-        - name: groupId
+        - name: id
           in: path
           required: true
-          description: The ID of the group to update
           schema:
             type: string
-            example: '1'
+            format: uuid
+          description: ID of the group to update
       requestBody:
-        description: The updated group data
+        required: true
         content:
           application/json:
             schema:
@@ -87,174 +105,145 @@ paths:
               properties:
                 name:
                   type: string
-                  example: 'Updated Group Name'
+                  description: Name of the group
+                  example: 'Work Project'
                 type:
                   type: string
-                  example: 'private'
+                  description: Type of the group
+                  example: work
                 profile_image_url:
                   type: string
-                  example: 'https://s3.amazonaws.com/bucket-name/path/to/new-image.jpg'
-      security:
-        - bearerAuth: []
+                  description: New profile image URL
+                  example: 'https://example.com/updated-profile.png'
       responses:
         200:
           description: Group updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Group'
-        400:
-          description: Invalid request data
-        401:
-          description: Unauthorized. Token is missing or invalid.
-        404:
-          description: Group not found.
 
+        403:
+          description: Not authorized
+        404:
+          description: Group not found
+        500:
+          description: Internal server error
     delete:
       tags:
         - Groups
       summary: Delete a group
-      description: Delete an existing group.
+      security:
+        - bearerAuth: []
       parameters:
         - name: groupId
           in: path
           required: true
-          description: The ID of the group to delete
           schema:
             type: string
-            example: '1'
-      security:
-        - bearerAuth: []
+            format: uuid
+          description: ID of the group to delete
       responses:
         200:
           description: Group deleted successfully
-        401:
-          description: Unauthorized. Token is missing or invalid.
+        403:
+          description: Not authorized
         404:
-          description: Group not found.
+          description: Group not found
+        500:
+          description: Internal server error
 
-  /groups/{groupId}/addMember:
+  /groups/{id}/add-member:
     post:
       tags:
         - Groups
-      summary: Add a new member to the group
-      description: Add a member to the group, with the option to assign admin role.
+      summary: Add a member to a group
+      security:
+        - bearerAuth: []
       parameters:
-        - name: groupId
+        - name: id
           in: path
           required: true
-          description: The ID of the group to which the user will be added
           schema:
             type: string
-            example: '1'
+            format: uuid
+          description: ID of the group
       requestBody:
-        description: Data of the user to add
+        required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - userId
               properties:
                 userId:
                   type: string
-                  example: '456'
+                  description: ID of the user to add
+                  example: '123'
                 isAdmin:
                   type: boolean
-                  example: true
-      security:
-        - bearerAuth: []
+                  description: Whether the user should be an admin
+                  example: false
       responses:
-        200:
-          description: User added to group successfully
+        201:
+          description: User added to the group successfully
         400:
-          description: Invalid user or group
-        401:
-          description: Unauthorized. Token is missing or invalid.
+          description: Bad request
+        404:
+          description: Group or user not found
+        500:
+          description: Internal server error
 
-  /groups/{groupId}/leave:
+  /groups/{id}/leave:
     post:
       tags:
         - Groups
       summary: Leave a group
-      description: Allow a user to leave a group.
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          description: The ID of the group the user wants to leave
-          schema:
-            type: string
-            example: '1'
       security:
         - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group to leave
       responses:
         200:
-          description: User successfully left the group
-        401:
-          description: Unauthorized. Token is missing or invalid.
+          description: Successfully left the group
         404:
-          description: Group not found.
+          description: Group or user not found
+        500:
+          description: Internal server error
 
-  /groups/{groupId}/{userId}/remove:
+  /groups/{id}/users/{userId}:
     delete:
       tags:
         - Groups
-      summary: Remove a user from the group
-      description: Remove a user from the group, can only be performed by the group admin.
+      summary: Remove a user from a group
+      security:
+        - bearerAuth: []
       parameters:
-        - name: groupId
+        - name: id
           in: path
           required: true
-          description: The ID of the group from which the user will be removed
           schema:
             type: string
-            example: '1'
+            format: uuid
+          description: ID of the group
         - name: userId
           in: path
           required: true
-          description: The ID of the user to remove
           schema:
             type: string
-            example: '456'
-      security:
-        - bearerAuth: []
+            format: uuid
+          description: ID of the user to remove
       responses:
         200:
-          description: User removed from the group
-        401:
-          description: Unauthorized. Token is missing or invalid.
+          description: User removed from the group successfully
         404:
-          description: User or group not found.
-
-  /groups/{groupId}/payments:
-    get:
-      tags:
-        - Groups
-      summary: Get all payments for a group
-      description: Retrieve all payment records for a specific group.
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          description: The ID of the group to retrieve payments for
-          schema:
-            type: string
-            example: '1'
-      security:
-        - bearerAuth: []
-      responses:
-        200:
-          description: Payments fetched successfully
-          content:
-            application/json:
-              type: array
-              items:
-                $ref: '#/components/schemas/Payment'
-        401:
-          description: Unauthorized. Token is missing or invalid.
-        404:
-          description: Group not found.
+          description: Group or user not found
+        500:
+          description: Internal server error
 
 components:
   securitySchemes:
@@ -262,3 +251,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    uuid:
+      type: string
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      minLength: 36
+      maxLength: 36

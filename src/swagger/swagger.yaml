@@ -14,9 +14,9 @@ tags:
   - name: Users
     description: User-related operations
   - name: Groups
-    description: Group-related operations
+    description: Groups-related operations
   - name: Expenses
-    description: Expense-related operations
+    description: Expenses-related operations
 
 paths: {}
 components: {}
