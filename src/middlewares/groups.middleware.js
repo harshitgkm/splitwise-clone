@@ -2,13 +2,13 @@ const { GroupMember } = require('../models');
 
 const checkGroupAdmin = async (req, res, next) => {
   const userId = req.user.id;
-  const groupId = req.params.groupId;
+  const id = req.params.id;
 
   try {
     const groupMember = await GroupMember.findOne({
       where: {
         user_id: userId,
-        group_id: groupId,
+        group_id: id,
         is_admin: true,
       },
     });
