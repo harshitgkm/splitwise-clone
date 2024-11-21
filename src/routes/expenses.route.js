@@ -25,17 +25,40 @@ const {
   settleUpValidator,
 } = require('../validators/expenses.validator');
 
+const {
+  expenseSerializer,
+  getAllExpensesSerializer,
+  expenseDetailsSerializer,
+  updateExpenseSerializer,
+  settleUpSerializer,
+  createCommentSerializer,
+  getCommentsSerializer,
+  updateCommentSerializer,
+} = require('../serializers/expenses.serializer');
+
 router.post(
   '/',
   createExpenseValidator,
   verifyToken,
   checkUserInGroup,
   createExpense,
+  expenseSerializer,
 );
 
-router.get('/', verifyToken, checkUserInGroup, getAllExpenses);
+router.get(
+  '/',
+  verifyToken,
+  checkUserInGroup,
+  getAllExpenses,
+  getAllExpensesSerializer,
+);
 
-router.get('/:expenseId', verifyToken, getExpenseDetails);
+router.get(
+  '/:expenseId',
+  verifyToken,
+  getExpenseDetails,
+  expenseDetailsSerializer,
+);
 
 router.put(
   '/:expenseId',
@@ -43,6 +66,7 @@ router.put(
   verifyToken,
   upload.single('expense_image_url'),
   updateExpense,
+  updateExpenseSerializer,
 );
 
 router.delete('/:expenseId', verifyToken, deleteExpense);
@@ -52,13 +76,29 @@ router.post(
   settleUpValidator,
   verifyToken,
   settleUpExpense,
+  settleUpSerializer,
 );
 
-router.post('/:expenseId/comments', verifyToken, createComment);
+router.post(
+  '/:expenseId/comments',
+  verifyToken,
+  createComment,
+  createCommentSerializer,
+);
 
-router.get('/:expenseId/comments', verifyToken, getCommentsByExpense);
+router.get(
+  '/:expenseId/comments',
+  verifyToken,
+  getCommentsByExpense,
+  getCommentsSerializer,
+);
 
-router.put('/:expenseId/comments/:commentId', verifyToken, updateComment);
+router.put(
+  '/:expenseId/comments/:commentId',
+  verifyToken,
+  updateComment,
+  updateCommentSerializer,
+);
 
 router.delete('/:expenseId/comments/:commentId', verifyToken, deleteComment);
 

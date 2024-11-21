@@ -431,29 +431,76 @@ const settleUpService = async (payerId, payeeId, amount, expenseId) => {
 };
 
 const createCommentService = async ({ expenseId, userId, comment }) => {
-  return await Comment.create({
+  const newComment = await Comment.create({
     expense_id: expenseId,
     user_id: userId,
     comment,
   });
+
+  const user = await User.findByPk(userId, {
+    attributes: ['username', 'profile_picture_url'],
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return {
+    id: newComment.id,
+    expenseId: newComment.expense_id,
+    userId: newComment.user_id,
+    comment: newComment.comment,
+    createdAt: newComment.created_at,
+    updatedAt: newComment.updated_at,
+    user: {
+      username: user.username,
+      profilePicture: user.profile_picture_url,
+    },
+  };
 };
 
 const getCommentsService = async expenseId => {
   return await Comment.findAll({
     where: { expense_id: expenseId },
-    include: [{ model: User, attributes: ['username', 'profile_picture_url'] }],
+    include: [
+      {
+        model: User,
+        attributes: ['username', 'profile_picture_url'],
+      },
+    ],
     order: [['created_at', 'ASC']],
   });
 };
 
 const updateCommentService = async (commentId, newCommentText) => {
-  const comment = await Comment.findByPk(commentId);
+  const comment = await Comment.findByPk(commentId, {
+    include: [
+      {
+        model: User,
+        attributes: ['username', 'profile_picture_url'],
+      },
+    ],
+  });
+
   if (!comment) {
     throw new Error('Comment not found');
   }
+
   comment.comment = newCommentText;
   await comment.save();
-  return comment;
+
+  return {
+    id: comment.id,
+    expenseId: comment.expense_id,
+    userId: comment.user_id,
+    comment: comment.comment,
+    createdAt: comment.created_at,
+    updatedAt: comment.updated_at,
+    user: {
+      username: comment.User.username,
+      profilePicture: comment.User.profile_picture_url,
+    },
+  };
 };
 
 const deleteCommentService = async commentId => {

@@ -11,11 +11,9 @@ const {
   deleteCommentService,
 } = require('../services/expenses.service.js');
 
-const createExpense = async (req, res) => {
+const createExpense = async (req, res, next) => {
   const { groupId } = req.query;
   const { amount, description, splitType, users } = req.body;
-
-  console.log(groupId, amount, description, splitType);
 
   try {
     const expense = await createExpenseService(
@@ -25,40 +23,41 @@ const createExpense = async (req, res) => {
       splitType,
       users,
     );
-    res.status(201).json(expense);
+    res.data = expense;
+    next();
   } catch (error) {
     res.json({ message: error.message });
   }
 };
 
-const getAllExpenses = async (req, res) => {
+const getAllExpenses = async (req, res, next) => {
   const groupId = req.query.groupId;
   const { page = 1, limit = 10 } = req.query;
   try {
     const expenses = await getAllExpensesService(groupId, page, limit);
-    res.status(200).json(expenses);
+    res.data = expenses;
+    next();
   } catch (error) {
     res.json({ message: error.message });
   }
 };
 
-const getExpenseDetails = async (req, res) => {
+const getExpenseDetails = async (req, res, next) => {
   try {
     const expense = await getExpenseDetailsService(req.params.expenseId);
-    res.status(200).json(expense);
+    res.data = expense;
+    next();
   } catch (error) {
     res.json({ message: error.message });
   }
 };
 
-const updateExpense = async (req, res) => {
+const updateExpense = async (req, res, next) => {
   try {
     const expenseId = req.params.expenseId;
 
-    //parse the form-data and organize into an object
     const { description, amount, split_type } = req.body;
 
-    // parse users from form-data
     const users = [];
     for (let i = 0; req.body[`users[${i}].userId`]; i++) {
       users.push({
@@ -81,15 +80,12 @@ const updateExpense = async (req, res) => {
       users,
     });
 
-    res
-      .status(200)
-      .json({ message: 'Expense updated successfully', updatedExpense });
+    res.data = updatedExpense;
+    next();
   } catch (error) {
     res.json({ message: error.message });
   }
 };
-
-module.exports = { updateExpense };
 
 const deleteExpense = async (req, res) => {
   try {
@@ -100,31 +96,23 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-const settleUpExpense = async (req, res) => {
-  const { payerId, payeeId, amount, groupId } = req.body;
+const settleUpExpense = async (req, res, next) => {
+  const { payerId, payeeId, amount } = req.body;
   console.log(payerId, payeeId, amount);
   const expenseId = req.params.expenseId;
   console.log(expenseId);
 
   try {
-    const result = await settleUpService(
-      payerId,
-      payeeId,
-      amount,
-      expenseId,
-      groupId,
-    );
-    res.status(200).json({
-      message: 'Settle up successful',
-      data: result,
-    });
+    const result = await settleUpService(payerId, payeeId, amount, expenseId);
+    res.data = result;
+    next();
   } catch (error) {
     console.log(error);
     res.json({ message: error.message });
   }
 };
 
-const createComment = async (req, res) => {
+const createComment = async (req, res, next) => {
   try {
     const { expenseId } = req.params;
     const { comment } = req.body;
@@ -136,32 +124,35 @@ const createComment = async (req, res) => {
       comment,
     });
 
-    res.status(201).json({ data: newComment });
+    res.data = newComment;
+    next();
   } catch (error) {
     res.json({ error: error.message });
   }
 };
 
-const getCommentsByExpense = async (req, res) => {
+const getCommentsByExpense = async (req, res, next) => {
   try {
     const { expenseId } = req.params;
 
     const comments = await getCommentsService(expenseId);
 
-    res.status(200).json({ success: true, data: comments });
+    res.data = comments;
+    next();
   } catch (error) {
     res.json({ success: false, error: error.message });
   }
 };
 
-const updateComment = async (req, res) => {
+const updateComment = async (req, res, next) => {
   try {
     const { commentId } = req.params;
     const { comment } = req.body;
 
     const updatedComment = await updateCommentService(commentId, comment);
 
-    res.status(200).json({ success: true, data: updatedComment });
+    res.data = updatedComment;
+    next();
   } catch (error) {
     res.json({ success: false, error: error.message });
   }
