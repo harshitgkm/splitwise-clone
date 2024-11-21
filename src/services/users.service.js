@@ -71,7 +71,6 @@ const addFriendService = async (friend_one, friend_two) => {
     throw new Error('Friend not found');
   }
 
-  // Return the success message with the friend's name
   return {
     message: `Friendship created successfully with ${friend.username}`,
     friend: friend.username,
@@ -140,7 +139,6 @@ const generateExpenseReportService = async userId => {
 
     const totalPaidAmount = parseFloat(totalPaid[0].totalPaid || 0);
     const totalOwedAmount = parseFloat(totalOwed[0].totalOwed || 0);
-    // const balance = totalPaidAmount - totalOwedAmount;
 
     const payments = await ExpenseSplit.findAll({
       where: { user_id: userId },
@@ -236,7 +234,6 @@ const generatePDFAndUploadToS3 = async userId => {
     pdfDoc.pipe(passThroughStream);
     pdfDoc.pipe(writeStream);
 
-    //add content to the pdf
     pdfDoc.fontSize(18).text('Expense Report', { align: 'center' });
     pdfDoc.moveDown();
 

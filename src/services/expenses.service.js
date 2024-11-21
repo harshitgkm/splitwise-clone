@@ -26,8 +26,6 @@ const createExpenseService = async (
     split_type: splitType,
   });
 
-  // let totalAmountPaid = 0;
-
   const groupUsers = await group.getUsers();
 
   switch (splitType) {
@@ -216,8 +214,8 @@ const getExpenseDetailsService = async expenseId => {
           const amountOwed = share - parseFloat(split.amount_paid);
           if (amountOwed > 0) {
             oweDetails.push({
-              payer: split.username, //one who paid less
-              oweTo: payer.username, //one who paid more
+              payer: split.username, // who paid less
+              oweTo: payer.username, // who paid more
               amount: amountOwed.toFixed(2),
             });
           }
@@ -247,7 +245,6 @@ const updateExpenseService = async ({
   if (amount) expense.amount = parseFloat(amount);
   if (split_type) expense.split_type = split_type;
 
-  // save updated expense
   await expense.save();
 
   // delete old splits
@@ -365,7 +362,6 @@ const updateExpenseService = async ({
       throw new Error('Invalid split type');
   }
 
-  //insert the new splits
   await ExpenseSplit.bulkCreate(splits);
 
   return expense;
