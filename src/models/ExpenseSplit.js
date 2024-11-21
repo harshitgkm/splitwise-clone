@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       });
       ExpenseSplit.belongsTo(models.User, {
         foreignKey: 'user_id',
+        as: 'user',
       });
     }
   }

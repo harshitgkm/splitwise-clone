@@ -11,11 +11,10 @@ module.exports = (sequelize, DataTypes) => {
       Expense.belongsTo(models.Group, {
         foreignKey: 'group_id',
       });
-      // Expense.belongsTo(models.User, {
-      //   foreignKey: 'payer_id',
-      // });
+
       Expense.hasMany(models.ExpenseSplit, {
         foreignKey: 'expense_id',
+        as: 'expenseSplits',
       });
       Expense.hasMany(models.Comment, {
         foreignKey: 'expense_id',
