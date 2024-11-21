@@ -6,15 +6,10 @@ const path = require('path');
 
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
+app.use(express.urlencoded({ extended: true }));
 
-// const swaggerDocument = YAML.load(
-//   path.join(__dirname, 'swagger', 'auth.swagger.yaml'),
-// );
-// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-// const swaggerDocument = YAML.load('src/swagger/swagger.yaml');
 const swaggerMain = YAML.load(path.join(__dirname, 'swagger', 'swagger.yaml'));
 
-// Load the auth and users swagger files
 const authSwagger = YAML.load(
   path.join(__dirname, 'swagger', 'auth.swagger.yaml'),
 );
@@ -28,7 +23,6 @@ const expensesSwagger = YAML.load(
   path.join(__dirname, 'swagger', 'expenses.swagger.yaml'),
 );
 
-// Merge the Swagger files manually
 const combinedSwagger = {
   ...swaggerMain,
   paths: {
@@ -47,7 +41,6 @@ const combinedSwagger = {
   },
 };
 
-// Serve Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(combinedSwagger));
 
 app.use(express.json());
