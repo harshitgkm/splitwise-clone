@@ -14,7 +14,7 @@ const updateUserValidator = (req, res, next) => {
 
 const addFriendValidator = (req, res, next) => {
   const schema = Joi.object({
-    friend_two: Joi.string().uuid().required(),
+    id: Joi.string().uuid().required(),
   });
 
   const { error } = schema.validate(req.body);

@@ -3,15 +3,14 @@ const {
   ExpenseSplit,
   FriendList,
   Payment,
+  Expense,
   Report,
+  Group,
 } = require('../models');
 require('dotenv').config();
 const Op = require('sequelize');
 const { Sequelize } = require('sequelize');
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
-const PDFDocument = require('pdfkit');
-const { PassThrough } = require('stream');
-const { v4: uuidv4 } = require('uuid');
 
 const getUserById = async userId => {
   console.log('Fetching user by ID');
@@ -61,25 +60,49 @@ const addFriendService = async (friend_one, friend_two) => {
   if (existingFriendship) {
     throw new Error('Friendship already exists');
   }
+  const friend = await User.findOne({
+    where: {
+      id: friend_two,
+    },
+    attributes: ['username'],
+  });
 
-  const newFriendship = await FriendList.create({ friend_one, friend_two });
-  return newFriendship;
+  if (!friend) {
+    throw new Error('Friend not found');
+  }
+
+  // Return the success message with the friend's name
+  return {
+    message: `Friendship created successfully with ${friend.username}`,
+    friend: friend.username,
+  };
 };
 
-const getFriends = async (userId, page = 1, limit = 10) => {
-  console.log('User id => ', typeof userId);
-
-  const offset = (page - 1) * limit;
-
-  let friend = await FriendList.findAll({
-    where: Op.or(
-      Op.literal(`"friend_one" = CAST('${userId}' AS UUID)`),
-      Op.literal(`"friend_two" = CAST('${userId}' AS UUID)`),
+const getFriends = async userId => {
+  const friends = await FriendList.findAll({
+    where: Sequelize.literal(
+      `"friend_one" = CAST('${userId}' AS UUID) OR "friend_two" = CAST('${userId}' AS UUID)`,
     ),
-    limit: limit,
-    offset: offset,
+    attributes: ['friend_one', 'friend_two'],
   });
-  return friend;
+
+  const friendNames = await Promise.all(
+    friends.map(async friend => {
+      const friendId =
+        friend.friend_one === userId ? friend.friend_two : friend.friend_one;
+
+      const friendUser = await User.findOne({
+        where: {
+          id: friendId,
+        },
+        attributes: ['username'],
+      });
+
+      return friendUser ? friendUser.username : 'Unknown';
+    }),
+  );
+
+  return friendNames;
 };
 
 const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
@@ -115,20 +138,80 @@ const generateExpenseReportService = async userId => {
       raw: true,
     });
 
-    console.log('Total Paid:', totalPaid);
-    console.log('Total Owed:', totalOwed);
-
     const totalPaidAmount = parseFloat(totalPaid[0].totalPaid || 0);
     const totalOwedAmount = parseFloat(totalOwed[0].totalOwed || 0);
-    const balance = totalPaidAmount - totalOwedAmount;
+    // const balance = totalPaidAmount - totalOwedAmount;
+
+    const payments = await ExpenseSplit.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: Expense,
+          include: [
+            {
+              model: Group,
+              attributes: ['name'],
+            },
+            {
+              model: ExpenseSplit,
+              as: 'expenseSplits',
+              attributes: ['amount_paid', 'amount_owed', 'split_ratio'],
+            },
+          ],
+          attributes: ['description', 'amount', 'created_at'],
+        },
+      ],
+      attributes: ['amount_paid', 'amount_owed', 'created_at'],
+    });
+
+    const expenses = await Expense.findAll({
+      include: [
+        {
+          model: ExpenseSplit,
+          as: 'expenseSplits',
+          where: { user_id: userId },
+          attributes: ['amount_paid', 'amount_owed', 'split_ratio'],
+        },
+        {
+          model: Group,
+          attributes: ['name'],
+        },
+      ],
+      attributes: ['id', 'description', 'amount', 'created_at'],
+    });
+
+    const paymentRecords = payments.map(payment => {
+      const expense = payment.Expense;
+      return {
+        amountPaid: payment.amount_paid,
+        amountOwed: payment.amount_owed,
+        expenseDescription: expense ? expense.description : 'Unknown',
+        groupName: expense && expense.Group ? expense.Group.name : 'No Group',
+        createdAt: payment.created_at,
+      };
+    });
+
+    const userExpenses = expenses.map(expense => ({
+      id: expense.id,
+      description: expense.description,
+      amount: expense.amount,
+      createdAt: expense.created_at,
+      groupName: expense.Group ? expense.Group.name : 'No Group',
+      splits: expense.expenseSplits.map(split => ({
+        amountPaid: split.amount_paid,
+        amountOwed: split.amount_owed,
+        splitRatio: split.split_ratio,
+      })),
+    }));
 
     return {
       totalPaid: totalPaidAmount,
       totalOwed: totalOwedAmount,
-      balance,
+      paymentRecords,
+      userExpenses,
     };
   } catch (error) {
-    console.log(error);
+    console.error('Error generating expense report:', error);
     throw new Error('Failed to generate report data');
   }
 };
@@ -136,60 +219,100 @@ const generateExpenseReportService = async userId => {
 const generatePDFAndUploadToS3 = async userId => {
   try {
     const reportData = await generateExpenseReportService(userId);
-    console.log('Hello worrld');
-    console.log(reportData);
+    console.log('Report Data:', reportData);
 
-    // const fs = require('fs');
-    // const path = require('path');
+    const fs = require('fs');
+    const path = require('path');
+    const { PassThrough } = require('stream');
+    const PDFDocument = require('pdfkit');
+    const { v4: uuidv4 } = require('uuid');
 
-    //create a pdf document
     const pdfDoc = new PDFDocument();
     const passThroughStream = new PassThrough();
-    pdfDoc.pipe(passThroughStream);
 
-    //add content to the PDF
+    const pdfPath = path.join(__dirname, `expense-report-${userId}.pdf`);
+    const writeStream = fs.createWriteStream(pdfPath);
+
+    pdfDoc.pipe(passThroughStream);
+    pdfDoc.pipe(writeStream);
+
+    //add content to the pdf
     pdfDoc.fontSize(18).text('Expense Report', { align: 'center' });
     pdfDoc.moveDown();
-    pdfDoc.fontSize(12).text(`Total Expenses: ${reportData.totalExpenses}`);
-    pdfDoc.text(`Total Payments: ${reportData.totalPayments}`);
-    pdfDoc.text(`Balance: ${reportData.balance}`);
+
+    pdfDoc.fontSize(12).text(`Total Paid: ${reportData.totalPaid}`);
+    pdfDoc.text(`Total Owed: ${reportData.totalOwed}`);
+    pdfDoc.moveDown();
+
+    if (reportData.paymentRecords.length > 0) {
+      pdfDoc.fontSize(14).text('Payment Records:', { underline: true });
+      pdfDoc.moveDown();
+      reportData.paymentRecords.forEach((record, index) => {
+        pdfDoc
+          .fontSize(12)
+          .text(
+            `${index + 1}. Paid: ${record.amountPaid}, Owed: ${record.amountOwed}, Description: ${record.expenseDescription}, Group: ${record.groupName}, Date: ${new Date(record.createdAt).toLocaleDateString()}`,
+          );
+      });
+      pdfDoc.moveDown();
+    }
+
+    if (reportData.userExpenses.length > 0) {
+      pdfDoc.fontSize(14).text('User Expenses:', { underline: true });
+      pdfDoc.moveDown();
+      reportData.userExpenses.forEach((expense, index) => {
+        pdfDoc
+          .fontSize(12)
+          .text(
+            `${index + 1}. Description: ${expense.description}, Amount: ${expense.amount}, Group: ${expense.groupName}, Date: ${new Date(expense.createdAt).toLocaleDateString()}`,
+          );
+        if (expense.splits.length > 0) {
+          pdfDoc.text('Splits:');
+          expense.splits.forEach(split => {
+            pdfDoc.text(
+              `  - Paid: ${split.amountPaid}, Owed: ${split.amountOwed}, Ratio: ${split.splitRatio}`,
+            );
+          });
+        }
+        pdfDoc.moveDown();
+      });
+    }
+
     pdfDoc.end();
 
-    //save to local
+    await new Promise((resolve, reject) => {
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
 
-    // const pdfPath = path.join(__dirname, `expense-report-${userId}.pdf`);
-    // const writeStream = fs.createWriteStream(pdfPath);
-    // pdfDoc.pipe(writeStream);
-    // pdfDoc.end();
+    console.log(`PDF report saved locally at ${pdfPath}`);
 
-    // writeStream.on('finish', () => {
-    //   console.log(`PDF report saved locally at ${pdfPath}`);
-    // });
+    const fileBuffer = await new Promise((resolve, reject) => {
+      const buffer = [];
+      passThroughStream.on('data', chunk => buffer.push(chunk));
+      passThroughStream.on('end', () => resolve(Buffer.concat(buffer)));
+      passThroughStream.on('error', reject);
+    });
 
-    // pdfDoc.on('data', chunk => {
-    //   console.log('Writing chunk to buffer:', chunk);
-    // });
-
-    //prepare file object for S3 upload
     const pdfFile = {
       originalname: `expense-report-${userId}-${uuidv4()}.pdf`,
-      buffer: passThroughStream.read(),
+      buffer: fileBuffer,
       ACL: 'public-read',
       mimetype: 'application/pdf',
     };
 
-    //upload PDF to S3 and get the file url
     const s3Url = await uploadFileToS3(pdfFile);
-
-    console.log('hello world 2 ');
 
     await Report.create({
       user_id: userId,
       report_url: s3Url,
     });
 
+    console.log(`PDF report uploaded to S3: ${s3Url}`);
+
     return s3Url;
   } catch (error) {
+    console.error('Error generating and uploading PDF report:', error);
     throw new Error(
       'Error generating and uploading PDF report: ' + error.message,
     );
