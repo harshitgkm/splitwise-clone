@@ -24,6 +24,6 @@ router.post('/verify-otp', verifyOtp);
 
 router.post('/login', validateLogin, login);
 
-router.post('/logout', verifyToken, logout);
+router.delete('/logout', verifyToken, logout);
 
 module.exports = router;
