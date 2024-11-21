@@ -44,7 +44,7 @@ const getAllExpenses = async (req, res, next) => {
 
 const getExpenseDetails = async (req, res, next) => {
   try {
-    const expense = await getExpenseDetailsService(req.params.expenseId);
+    const expense = await getExpenseDetailsService(req.params.id);
     res.data = expense;
     next();
   } catch (error) {
@@ -54,7 +54,7 @@ const getExpenseDetails = async (req, res, next) => {
 
 const updateExpense = async (req, res, next) => {
   try {
-    const expenseId = req.params.expenseId;
+    const expenseId = req.params.id;
 
     const { description, amount, split_type } = req.body;
 
@@ -89,7 +89,7 @@ const updateExpense = async (req, res, next) => {
 
 const deleteExpense = async (req, res) => {
   try {
-    await deleteExpenseService(req.params.expenseId);
+    await deleteExpenseService(req.params.id);
     res.json({ message: 'Expense deleted successfully' });
   } catch (error) {
     res.json({ message: error.message });
@@ -99,7 +99,7 @@ const deleteExpense = async (req, res) => {
 const settleUpExpense = async (req, res, next) => {
   const { payerId, payeeId, amount } = req.body;
   console.log(payerId, payeeId, amount);
-  const expenseId = req.params.expenseId;
+  const expenseId = req.params.id;
   console.log(expenseId);
 
   try {
@@ -114,7 +114,7 @@ const settleUpExpense = async (req, res, next) => {
 
 const createComment = async (req, res, next) => {
   try {
-    const { expenseId } = req.params;
+    const expenseId = req.params.id;
     const { comment } = req.body;
     const userId = req.user.id;
 
@@ -133,7 +133,7 @@ const createComment = async (req, res, next) => {
 
 const getCommentsByExpense = async (req, res, next) => {
   try {
-    const { expenseId } = req.params;
+    const expenseId = req.params.id;
 
     const comments = await getCommentsService(expenseId);
 

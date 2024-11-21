@@ -53,15 +53,10 @@ router.get(
   getAllExpensesSerializer,
 );
 
-router.get(
-  '/:expenseId',
-  verifyToken,
-  getExpenseDetails,
-  expenseDetailsSerializer,
-);
+router.get('/:id', verifyToken, getExpenseDetails, expenseDetailsSerializer);
 
 router.put(
-  '/:expenseId',
+  '/:id',
   updateExpenseValidator,
   verifyToken,
   upload.single('expense_image_url'),
@@ -69,10 +64,10 @@ router.put(
   updateExpenseSerializer,
 );
 
-router.delete('/:expenseId', verifyToken, deleteExpense);
+router.delete('/:id', verifyToken, deleteExpense);
 
 router.post(
-  '/:expenseId/settle-up',
+  '/:id/settle-up',
   settleUpValidator,
   verifyToken,
   settleUpExpense,
@@ -80,26 +75,26 @@ router.post(
 );
 
 router.post(
-  '/:expenseId/comments',
+  '/:id/comments',
   verifyToken,
   createComment,
   createCommentSerializer,
 );
 
 router.get(
-  '/:expenseId/comments',
+  '/:id/comments',
   verifyToken,
   getCommentsByExpense,
   getCommentsSerializer,
 );
 
 router.put(
-  '/:expenseId/comments/:commentId',
+  '/:id/comments/:commentId',
   verifyToken,
   updateComment,
   updateCommentSerializer,
 );
 
-router.delete('/:expenseId/comments/:commentId', verifyToken, deleteComment);
+router.delete('/:id/comments/:commentId', verifyToken, deleteComment);
 
 module.exports = router;
