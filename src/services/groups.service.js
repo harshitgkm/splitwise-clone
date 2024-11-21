@@ -20,15 +20,54 @@ const createGroupService = async (userId, groupData) => {
   return group;
 };
 
-const getGroupsService = async (userId, page = 1, limit = 10) => {
-  const offset = (page - 1) * limit;
-  const groups = await GroupMember.findAll({
-    where: { user_id: userId },
-    limit: limit,
-    offset: offset,
-  });
+const getGroupsService = async (
+  userId,
+  page = 1,
+  limit = 10,
+  filter = 'owed',
+) => {
+  try {
+    const offset = (page - 1) * limit;
 
-  return groups;
+    const groupMembers = await GroupMember.findAll({
+      where: { user_id: userId },
+      limit: limit,
+      offset: offset,
+    });
+
+    if (!groupMembers || groupMembers.length === 0) {
+      return [];
+    }
+
+    const groups = [];
+
+    for (let member of groupMembers) {
+      try {
+        const group = await Group.findByPk(member.group_id);
+
+        if (group) {
+          if (filter === 'all' || filter === 'owe' || filter === 'owed') {
+            if (filter === 'all' || filter === 'owe' || filter === 'owed') {
+              groups.push({
+                groupId: group.id,
+                groupName: group.name,
+                groupType: group.type,
+              });
+            }
+          }
+        } else {
+          console.warn(`Group not found for group_member: ${member.group_id}`);
+        }
+      } catch (error) {
+        console.error(`Error fetching group for member ${member.id}:`, error);
+      }
+    }
+
+    return groups;
+  } catch (error) {
+    console.error('Error retrieving groups:', error);
+    throw new Error('Error retrieving groups');
+  }
 };
 
 const updateGroupService = async (userId, groupId, groupData) => {
