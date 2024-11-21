@@ -1,23 +1,34 @@
-openapi: 3.0.1
+openapi: 3.0.0
 info:
   title: Expense Management API
+  description: API for managing expenses, comments, and settlements in a group.
   version: 1.0.0
-  description: API for managing expenses in a group
+
 servers:
   - url: http://localhost:3000/api
-    description: Local server
+
+tags:
+  - name: Expenses
+    description: Operations related to expenses
 
 paths:
   /expenses:
     post:
-      summary: Create an expense
-      description: Create a new expense within a group.
-      tags:
-        - Expenses
+      summary: Create a new expense
       security:
         - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: groupId
+          in: query
+          description: The ID of the group associated with the expense
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
-        description: Expense details to create the expense
+        description: The expense details to create.
         required: true
         content:
           application/json:
@@ -27,177 +38,302 @@ paths:
                 amount:
                   type: number
                   format: float
+                  description: Total amount of the expense
                 description:
                   type: string
+                  description: Description of the expense
                 splitType:
                   type: string
                   enum:
                     - EQUALLY
-                    - UNEQUAL
                     - PERCENTAGE
                     - SHARES
+                    - UNEQUAL
+                  description: Split type for the expense
                 users:
                   type: array
                   items:
                     type: object
                     properties:
                       userId:
-                        type: integer
-                      amountPaid:
-                        type: number
-                        format: float
-                      amountOwed:
-                        type: number
-                        format: float
+                        type: string
+                        description: ID of the user
                       percentage:
                         type: number
                         format: float
+                        description: Percentage of the expense (required for percentage split type)
                       shares:
-                        type: integer
+                        type: number
+                        format: float
+                        description: Shares of the expense (required for share split type)
+                      amountPaid:
+                        type: number
+                        format: float
+                        description: Amount paid by the user (required for unequal split type)
+              required:
+                - groupId
+                - amount
+                - splitType
+                - users
       responses:
-        201:
+        '200':
           description: Expense created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Expense'
-        400:
-          description: Bad Request. Invalid input.
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The ID of the created expense
+                  amount:
+                    type: number
+                    format: float
+                    description: Total amount of the expense
+                  description:
+                    type: string
+                    description: Description of the expense
+                  splitType:
+                    type: string
+                    description: Split type for the expense
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Timestamp when the expense was created
+        '400':
+          description: Bad request, missing or invalid data
+        '404':
+          description: Group not found
 
     get:
       summary: Get all expenses for a group
-      description: Retrieve all expenses for the specified group.
-      tags:
-        - Expenses
       security:
         - bearerAuth: []
+      tags:
+        - Expenses
       parameters:
         - name: groupId
           in: query
-          description: The ID of the group for which expenses are to be retrieved
           required: true
           schema:
+            type: string
+          description: The ID of the group
+        - name: page
+          in: query
+          required: false
+          schema:
             type: integer
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of items per page
       responses:
-        200:
+        '200':
           description: List of expenses
           content:
             application/json:
-              type: array
-              items:
-                $ref: '#/components/schemas/Expense'
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    description:
+                      type: string
+                    amount:
+                      type: number
+                      format: float
+                    splitType:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+        '400':
+          description: Invalid query parameters
 
-  /expenses/{expenseId}:
+  /expenses/{id}:
     get:
       summary: Get details of a specific expense
-      description: Retrieve details of a specific expense by its ID.
-      tags:
-        - Expenses
       security:
         - bearerAuth: []
+      tags:
+        - Expenses
       parameters:
-        - name: expenseId
+        - name: id
           in: path
-          description: The ID of the expense to retrieve
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
+          description: The ID of the expense
       responses:
-        200:
+        '200':
           description: Expense details
           content:
             application/json:
-              $ref: '#/components/schemas/Expense'
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
-        404:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  amount:
+                    type: number
+                    format: float
+                  description:
+                    type: string
+                  splitType:
+                    type: string
+                  expenseSplits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                        amountPaid:
+                          type: number
+                          format: float
+                        amountOwed:
+                          type: number
+                          format: float
+                        splitRatio:
+                          type: number
+                          format: float
+        '404':
           description: Expense not found
 
     put:
-      summary: Update an expense
-      description: Update the details of an existing expense.
-      tags:
-        - Expenses
+      summary: Update an existing expense
       security:
         - bearerAuth: []
+      tags:
+        - Expenses
       parameters:
-        - name: expenseId
+        - name: id
           in: path
-          description: The ID of the expense to update
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
+          description: The ID of the expense to update
       requestBody:
-        description: Fields to update for the expense
+        description: The updated expense details in form-data format.
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
                 description:
                   type: string
+                  description: New description for the expense
                 amount:
                   type: number
                   format: float
-                expense_image_url:
+                  description: New amount for the expense
+                split_type:
                   type: string
+                  enum:
+                    - EQUALLY
+                    - PERCENTAGE
+                    - SHARES
+                    - UNEQUAL
+                  description: New split type
+                users:
+                  type: array
+                  description: Array of users with their details
+                  items:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        description: User ID
+                      percentage:
+                        type: number
+                        format: float
+                        description: Percentage of the expense (if applicable)
+                      shares:
+                        type: number
+                        format: float
+                        description: Shares of the expense (if applicable)
+                      amountPaid:
+                        type: number
+                        format: float
+                        description: Amount paid by the user (if applicable)
       responses:
-        200:
+        '200':
           description: Expense updated successfully
           content:
             application/json:
-              $ref: '#/components/schemas/Expense'
-        400:
-          description: Bad Request. Invalid input.
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
-        404:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message
+                  updatedExpense:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      description:
+                        type: string
+                      amount:
+                        type: number
+                        format: float
+                      splitType:
+                        type: string
+                      updatedAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: Invalid update data
+        '404':
           description: Expense not found
 
     delete:
-      summary: Delete an expense
-      description: Delete an existing expense by its ID.
-      tags:
-        - Expenses
+      summary: Delete a specific expense
       security:
         - bearerAuth: []
+      tags:
+        - Expenses
       parameters:
-        - name: expenseId
+        - name: id
           in: path
-          description: The ID of the expense to delete
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
+          description: The ID of the expense to delete
       responses:
-        200:
+        '200':
           description: Expense deleted successfully
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
-        404:
+        '404':
           description: Expense not found
 
-  /expenses/{expenseId}/settle-up:
+  /expenses/{id}/settle-up:
     post:
-      summary: Settle an expense between users
-      description: Settle an amount between users for a specific expense.
-      tags:
-        - Expenses
+      summary: Settle up an expense between two users
       security:
         - bearerAuth: []
+      tags:
+        - Expenses
       parameters:
-        - name: expenseId
+        - name: id
           in: path
-          description: The ID of the expense to settle
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
+          description: The ID of the expense to settle
       requestBody:
-        description: Payment details to settle the expense
+        description: The settlement details.
         required: true
         content:
           application/json:
@@ -205,133 +341,115 @@ paths:
               type: object
               properties:
                 payerId:
-                  type: integer
+                  type: string
+                  description: The ID of the user paying
                 payeeId:
-                  type: integer
+                  type: string
+                  description: The ID of the user receiving payment
                 amount:
                   type: number
                   format: float
-                groupId:
-                  type: integer
+                  description: The amount to settle
       responses:
-        200:
-          description: Expense settled successfully
-          content:
-            application/json:
+        '200':
+          description: Settlement successful
+        '400':
+          description: Invalid settlement data
+        '404':
+          description: Expense or user not found
+
+  /expenses/{id}/comments:
+    post:
+      summary: Add a comment to an expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense to comment on
+      requestBody:
+        description: The comment to add.
+        required: true
+        content:
+          application/json:
+            schema:
               type: object
               properties:
-                payerId:
-                  type: integer
-                payeeId:
-                  type: integer
-                newPayerBalance:
-                  type: number
-                  format: float
-                payment:
+                comment:
+                  type: string
+                  description: The text of the comment
+      responses:
+        '200':
+          description: Comment added successfully
+        '404':
+          description: Expense not found
+
+    get:
+      summary: Get all comments for a specific expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense
+      responses:
+        '200':
+          description: List of comments for the expense
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
                   type: object
                   properties:
                     id:
-                      type: integer
-                    payer_id:
-                      type: integer
-                    payee_id:
-                      type: integer
-                    amount:
-                      type: number
-                      format: float
-                    group_id:
-                      type: integer
-        400:
-          description: Bad Request. Invalid input.
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
-        404:
-          description: Expense or user not found
+                      type: string
+                    comment:
+                      type: string
+                    userId:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+        '404':
+          description: Expense not found
 
-  /expenses/{expenseId}/comments:
-    post:
-      summary: Create a comment for an expense
-      description: Add a comment to an expense.
-      tags:
-        - Expenses
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: expenseId
-          in: path
-          description: The ID of the expense to comment on
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        description: The content of the comment
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                comment:
-                  type: string
-      responses:
-        201:
-          description: Comment created successfully
-          content:
-            application/json:
-              $ref: '#/components/schemas/Comment'
-        400:
-          description: Bad Request. Invalid input.
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
-
-    get:
-      summary: Get all comments for an expense
-      description: Retrieve all comments for a specific expense.
-      tags:
-        - Expenses
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: expenseId
-          in: path
-          description: The ID of the expense to get comments for
-          required: true
-          schema:
-            type: integer
-      responses:
-        200:
-          description: List of comments
-          content:
-            application/json:
-              type: array
-              items:
-                $ref: '#/components/schemas/Comment'
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /expenses/{expenseId}/comments/{commentId}:
+  /expenses/{id}/comments/{commentId}:
     put:
-      summary: Update a comment
-      description: Update an existing comment for an expense.
-      tags:
-        - Expenses
+      summary: Update a comment on an expense
       security:
         - bearerAuth: []
+      tags:
+        - Expenses
       parameters:
-        - name: expenseId
+        - name: id
           in: path
-          description: The ID of the expense the comment belongs to
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
+          description: The ID of the expense
         - name: commentId
           in: path
-          description: The ID of the comment to update
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
+          description: The ID of the comment
       requestBody:
-        description: Updated content for the comment
+        description: The updated comment text.
         required: true
         content:
           application/json:
@@ -341,43 +459,36 @@ paths:
                 comment:
                   type: string
       responses:
-        200:
+        '200':
           description: Comment updated successfully
-          content:
-            application/json:
-              $ref: '#/components/schemas/Comment'
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
-        404:
-          description: Comment or expense not found
+        '404':
+          description: Expense or comment not found
 
     delete:
-      summary: Delete a comment
-      description: Delete an existing comment for an expense.
-      tags:
-        - Expenses
+      summary: Delete a comment on an expense
       security:
         - bearerAuth: []
+      tags:
+        - Expenses
       parameters:
-        - name: expenseId
+        - name: id
           in: path
-          description: The ID of the expense the comment belongs to
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
+          description: The ID of the expense
         - name: commentId
           in: path
-          description: The ID of the comment to delete
           required: true
           schema:
-            type: integer
+            type: string
+          description: The ID of the comment
       responses:
-        200:
+        '200':
           description: Comment deleted successfully
-        401:
-          $ref: '#/components/responses/UnauthorizedError'
-        404:
-          description: Comment or expense not found.
+        '404':
+          description: Expense or comment not found
 
 components:
   securitySchemes:
@@ -385,3 +496,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    uuid:
+      type: string
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      minLength: 36
+      maxLength: 36
