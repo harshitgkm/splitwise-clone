@@ -14,9 +14,6 @@ module.exports = (sequelize, DataTypes) => {
       Payment.belongsTo(models.User, {
         foreignKey: 'payee_id',
       });
-      Payment.belongsTo(models.Group, {
-        foreignKey: 'group_id',
-      });
     }
   }
   Payment.init(
@@ -26,11 +23,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      group_id: {
+      expense_id: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
-          model: 'groups',
+          model: 'expenses',
           key: 'id',
         },
       },

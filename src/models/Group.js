@@ -17,10 +17,6 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'group_id',
       });
 
-      Group.hasMany(models.Payment, {
-        foreignKey: 'group_id',
-      });
-
       Group.hasMany(models.Expense, {
         foreignKey: 'group_id',
       });
