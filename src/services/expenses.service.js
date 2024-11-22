@@ -27,7 +27,6 @@ const createExpenseService = async (
   });
 
   const groupUsers = await group.getUsers();
-
   switch (splitType) {
     case 'EQUALLY':
       {
@@ -239,8 +238,8 @@ const updateExpenseService = async ({
   users,
 }) => {
   const expense = await Expense.findByPk(expenseId);
-  if (!expense) throw new Error('Expense not found');
 
+  if (!expense) throw new Error('Expense not found');
   if (description) expense.description = description;
   if (amount) expense.amount = parseFloat(amount);
   if (split_type) expense.split_type = split_type;
@@ -502,7 +501,6 @@ const updateCommentService = async (commentId, newCommentText) => {
     },
   };
 };
-
 const deleteCommentService = async commentId => {
   const comment = await Comment.findByPk(commentId);
   if (!comment) {
