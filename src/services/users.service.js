@@ -71,6 +71,11 @@ const addFriendService = async (friend_one, friend_two) => {
     throw new Error('Friend not found');
   }
 
+  await FriendList.create({
+    friend_one: friend_one,
+    friend_two: friend_two,
+  });
+
   return {
     message: `Friendship created successfully with ${friend.username}`,
     friend: friend.username,

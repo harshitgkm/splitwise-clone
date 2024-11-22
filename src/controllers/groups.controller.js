@@ -7,6 +7,7 @@ const {
   leaveGroupService,
   removeUserService,
   getAllPaymentsInGroupService,
+  sendInviteEmail,
 } = require('../services/groups.service.js');
 
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
@@ -132,6 +133,21 @@ const getAllPaymentsForGroup = async (req, res, next) => {
   }
 };
 
+const sendGroupInvite = async (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body;
+  const inviterId = req.user.id;
+
+  try {
+    const result = await sendInviteEmail(id, email, inviterId);
+    res.status(200).json({ message: result });
+  } catch (error) {
+    console.log(error);
+
+    res.json({ error: error.message });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
@@ -141,4 +157,5 @@ module.exports = {
   leaveGroup,
   removeUser,
   getAllPaymentsForGroup,
+  sendGroupInvite,
 };

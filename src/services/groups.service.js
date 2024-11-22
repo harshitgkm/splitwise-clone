@@ -1,5 +1,5 @@
 const { Group, GroupMember, User, Payment } = require('../models');
-
+const { sendMail } = require('../helpers/mail.helper.js');
 const createGroupService = async (userId, groupData) => {
   const { name, type, profile_image_url } = groupData;
 
@@ -179,6 +179,26 @@ const getAllPaymentsInGroupService = async groupId => {
   return payments;
 };
 
+const sendInviteEmail = async (groupId, email, inviterId) => {
+  const group = await Group.findByPk(groupId);
+  if (!group) throw new Error('Group not found');
+
+  const isMember = await GroupMember.findOne({
+    where: { group_id: groupId, user_id: inviterId },
+  });
+  if (!isMember) throw new Error('You must be a group member to invite others');
+
+  const inviteLink = `https://your-app.com/invite?groupId=${groupId}&email=${email}`;
+
+  await sendMail({
+    to: email,
+    subject: "You're Invited to Join a Group!",
+    text: `You've been invited to join the group "${group.name}". Click here to join: ${inviteLink}`,
+  });
+
+  return `Invitation sent successfully to ${email}`;
+};
+
 module.exports = {
   createGroupService,
   getGroupsService,
@@ -188,4 +208,5 @@ module.exports = {
   leaveGroupService,
   removeUserService,
   getAllPaymentsInGroupService,
+  sendInviteEmail,
 };

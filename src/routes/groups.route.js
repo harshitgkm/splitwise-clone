@@ -9,6 +9,8 @@ const {
   addMemberToGroup,
   leaveGroup,
   removeUser,
+  sendGroupInvite,
+  acceptInvite,
 } = require('../controllers/groups.controller.js');
 
 const { verifyToken } = require('../middlewares/auth.middleware.js');
@@ -77,6 +79,8 @@ router.delete(
   removeUser,
   removeUserSerializer,
 );
+
+router.post('/:id/invite', verifyToken, checkGroupAdmin, sendGroupInvite);
 
 // router.get(
 //   '/:groupId/payments',
