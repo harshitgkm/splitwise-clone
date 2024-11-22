@@ -50,4 +50,18 @@ const sendExpenseNotification = async (
   }
 };
 
-module.exports = { sendOtpEmail, sendExpenseNotification };
+const sendMail = async mailOptions => {
+  try {
+    console.log(`Sending email to: ${mailOptions.to}`);
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      ...mailOptions,
+    });
+    console.log('Email sent successfully.');
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    throw new Error('Failed to send email.');
+  }
+};
+
+module.exports = { sendOtpEmail, sendExpenseNotification, sendMail };
