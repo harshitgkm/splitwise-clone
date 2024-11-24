@@ -109,6 +109,21 @@ const getFriends = async userId => {
   return friendNames;
 };
 
+const removeFriendService = async (friendId, userId) => {
+  const friendship = await FriendList.findOne({
+    id: friendId,
+    where: Sequelize.literal(
+      `"friend_one" = CAST('${userId}' AS UUID) OR "friend_two" = CAST('${userId}' AS UUID)`,
+    ),
+  });
+
+  if (!friendship) {
+    return { message: 'Friendship not found' };
+  }
+
+  await friendship.destroy();
+};
+
 const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
   const payments = await Payment.findAll({
@@ -349,4 +364,5 @@ module.exports = {
   generateExpenseReportService,
   generatePDFAndUploadToS3,
   getReportsService,
+  removeFriendService,
 };

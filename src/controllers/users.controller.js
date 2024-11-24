@@ -4,6 +4,7 @@ const {
   calculateOutstandingBalance,
   addFriendService,
   getFriends,
+  removeFriendService,
   getAllPaymentsService,
   generateExpenseReportService,
   generatePDFAndUploadToS3,
@@ -91,6 +92,18 @@ const getFriendsList = async (req, res, next) => {
   }
 };
 
+const removeFriend = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    await removeFriendService(id, userId);
+    return res.status(200).json({ message: 'Friend removed successfully' });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+};
+
 const getAllPaymentsForUser = async (req, res, next) => {
   const userId = req.user.id;
   const { page = 1, limit = 10 } = req.query;
@@ -147,6 +160,7 @@ module.exports = {
   getOutstandingBalance,
   addFriend,
   getFriendsList,
+  removeFriend,
   getAllPaymentsForUser,
   generateExpenseReport,
   exportReportToPDF,

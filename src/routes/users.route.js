@@ -5,6 +5,7 @@ const {
   updateUserProfile,
   getOutstandingBalance,
   addFriend,
+  removeFriend,
   getFriendsList,
   getAllPaymentsForUser,
   generateExpenseReport,
@@ -61,6 +62,8 @@ router.post(
 );
 
 router.get('/friends', verifyToken, getFriendsList, getFriendsListSerializer);
+
+router.delete('/friends/:id', verifyToken, removeFriend);
 
 router.get(
   '/payments',
