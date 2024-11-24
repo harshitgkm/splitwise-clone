@@ -8,10 +8,6 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      User.belongsToMany(models.Role, {
-        through: models.UserRole,
-        foreignKey: 'user_id',
-      });
       User.belongsToMany(models.Group, {
         through: models.GroupMember,
         foreignKey: 'user_id',
@@ -19,9 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.ExpenseSplit, {
         foreignKey: 'user_id',
       });
-      // User.hasMany(models.Expense, {
-      //   foreignKey: 'payer_id',
-      // });
+
       User.hasMany(models.Comment, {
         foreignKey: 'user_id',
       });
