@@ -7,6 +7,7 @@ const {
   deleteGroup,
   updateGroup,
   addMemberToGroup,
+  getGroupMembers,
   leaveGroup,
   removeUser,
   sendGroupInvite,
@@ -30,6 +31,7 @@ const {
   updateGroupSerializer,
   deleteGroupSerializer,
   addMemberToGroupSerializer,
+  getAllMembersSerializer,
   leaveGroupSerializer,
   removeUserSerializer,
 } = require('../serializers/groups.serializer.js');
@@ -72,8 +74,15 @@ router.post(
 
 router.post('/:id/leave', verifyToken, leaveGroup, leaveGroupSerializer);
 
+router.get(
+  '/:id/members',
+  verifyToken,
+  getGroupMembers,
+  getAllMembersSerializer,
+);
+
 router.delete(
-  '/:id/users/:userId',
+  '/:id/members/:userId',
   verifyToken,
   checkGroupAdmin,
   removeUser,
@@ -81,12 +90,5 @@ router.delete(
 );
 
 router.post('/:id/invite', verifyToken, checkGroupAdmin, sendGroupInvite);
-
-// router.get(
-//   '/:groupId/payments',
-//   verifyToken,
-//   getAllPaymentsForGroup,
-//   getAllPaymentsForGroupSerializer,
-// );
 
 module.exports = router;

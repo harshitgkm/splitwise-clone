@@ -95,12 +95,31 @@ const getAllPaymentsForGroupSerializer = (req, res) => {
   res.status(200).json(resultData);
 };
 
+const getAllMembersSerializer = (req, res) => {
+  console.log(res.data);
+  const receivedData = res.data || {};
+  let resultData = {};
+
+  if (receivedData) {
+    resultData = receivedData.map(member => ({
+      username: member.username || '',
+      email: member.email || '',
+      profilePicture: member.profile_picture_url || '',
+      isAdmin: member.is_admin || '',
+      joinedAt: member.joined_at || '',
+    }));
+  }
+
+  res.status(201).json(resultData);
+};
+
 module.exports = {
   createGroupSerializer,
   getGroupsSerializer,
   updateGroupSerializer,
   deleteGroupSerializer,
   addMemberToGroupSerializer,
+  getAllMembersSerializer,
   leaveGroupSerializer,
   removeUserSerializer,
   getAllPaymentsForGroupSerializer,

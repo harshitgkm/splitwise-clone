@@ -135,6 +135,39 @@ const addGroupMember = async (
   return newMember;
 };
 
+const fetchGroupMembers = async (groupId, currentUserId) => {
+  const group = await Group.findByPk(groupId);
+  if (!group) {
+    throw new Error('Group not found');
+  }
+
+  const isMember = await GroupMember.findOne({
+    where: { group_id: groupId, user_id: currentUserId },
+  });
+  if (!isMember) {
+    throw new Error('You do not have access to this group');
+  }
+
+  const members = await GroupMember.findAll({
+    where: { group_id: groupId },
+    include: [
+      {
+        model: User,
+        attributes: ['id', 'username', 'email', 'profile_picture_url'],
+      },
+    ],
+    attributes: ['is_admin', 'joined_at'],
+  });
+
+  return members.map(member => ({
+    username: member.User.username,
+    email: member.User.email,
+    profilePicture: member.User.profile_picture_url,
+    isAdmin: member.is_admin,
+    joinedAt: member.joined_at,
+  }));
+};
+
 const leaveGroupService = async (userId, groupId) => {
   const groupMember = await GroupMember.findOne({
     where: { group_id: groupId, user_id: userId },
@@ -207,6 +240,7 @@ module.exports = {
   updateGroupService,
   deleteGroupService,
   addGroupMember,
+  fetchGroupMembers,
   leaveGroupService,
   removeUserService,
   getAllPaymentsInGroupService,

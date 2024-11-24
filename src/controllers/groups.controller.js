@@ -4,6 +4,7 @@ const {
   updateGroupService,
   deleteGroupService,
   addGroupMember,
+  fetchGroupMembers,
   leaveGroupService,
   removeUserService,
   getAllPaymentsInGroupService,
@@ -93,6 +94,21 @@ const addMemberToGroup = async (req, res, next) => {
   }
 };
 
+const getGroupMembers = async (req, res, next) => {
+  try {
+    const { id: groupId } = req.params;
+    const currentUserId = req.user.id;
+
+    const members = await fetchGroupMembers(groupId, currentUserId);
+
+    res.data = members;
+    next();
+  } catch (error) {
+    console.error(error);
+    res.json({ message: error.message || 'Error getting group memebers' });
+  }
+};
+
 const leaveGroup = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -154,6 +170,7 @@ module.exports = {
   updateGroup,
   deleteGroup,
   addMemberToGroup,
+  getGroupMembers,
   leaveGroup,
   removeUser,
   getAllPaymentsForGroup,
