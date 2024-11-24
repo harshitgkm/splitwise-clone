@@ -62,14 +62,10 @@ const getOutstandingBalance = async (req, res, next) => {
 
 const addFriend = async (req, res, next) => {
   const userId = req.user.id;
-  const { id: friend_two } = req.body;
-
-  if (!friend_two || userId === friend_two) {
-    return res.status(400).json({ message: 'Invalid friend IDs provided' });
-  }
+  const { username } = req.body;
 
   try {
-    const newFriendship = await addFriendService(userId, friend_two);
+    const newFriendship = await addFriendService(userId, username);
     res.data = newFriendship;
     next();
   } catch (error) {

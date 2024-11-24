@@ -42,9 +42,21 @@ const calculateOutstandingBalance = async userId => {
   return outstandingBalance;
 };
 
-const addFriendService = async (friend_one, friend_two) => {
-  console.log('friend_one:', friend_one);
-  console.log('friend_two:', friend_two);
+const addFriendService = async (friend_one, friend_username) => {
+  const friend = await User.findOne({
+    where: { username: friend_username },
+    attributes: ['id', 'username'],
+  });
+
+  if (!friend) {
+    throw new Error('User with this username not found');
+  }
+
+  const friend_two = friend.id;
+
+  if (friend_one === friend_two) {
+    throw new Error('You cannot add yourself as a friend');
+  }
 
   const existingFriendship = await FriendList.findOne({
     where: Op.or(
@@ -59,16 +71,6 @@ const addFriendService = async (friend_one, friend_two) => {
 
   if (existingFriendship) {
     throw new Error('Friendship already exists');
-  }
-  const friend = await User.findOne({
-    where: {
-      id: friend_two,
-    },
-    attributes: ['username'],
-  });
-
-  if (!friend) {
-    throw new Error('Friend not found');
   }
 
   await FriendList.create({
