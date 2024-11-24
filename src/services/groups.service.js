@@ -103,7 +103,7 @@ const deleteGroupService = async (userId, groupId) => {
 const addGroupMember = async (
   groupId,
   currentUserId,
-  userId,
+  username,
   isAdmin = false,
 ) => {
   const group = await Group.findByPk(groupId);
@@ -111,10 +111,12 @@ const addGroupMember = async (
     throw new Error('Group not found');
   }
 
-  const user = await User.findByPk(userId);
+  const user = await User.findOne({ where: { username } });
   if (!user) {
     throw new Error('User not found');
   }
+
+  const userId = user.id;
 
   const existingMember = await GroupMember.findOne({
     where: { group_id: groupId, user_id: userId },

@@ -80,10 +80,10 @@ const deleteGroup = async (req, res, next) => {
 const addMemberToGroup = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { userId, isAdmin } = req.body;
+    const { username, isAdmin } = req.body;
     const currentUserId = req.user.id;
 
-    const result = await addGroupMember(id, currentUserId, userId, isAdmin);
+    const result = await addGroupMember(id, currentUserId, username, isAdmin);
 
     res.data = result;
     next();
