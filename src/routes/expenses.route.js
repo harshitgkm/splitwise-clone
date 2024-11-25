@@ -40,7 +40,6 @@ router.post(
   '/',
   createExpenseValidator,
   verifyToken,
-  checkUserInGroup,
   createExpense,
   expenseSerializer,
 );

@@ -12,8 +12,9 @@ const {
 } = require('../services/expenses.service.js');
 
 const createExpense = async (req, res, next) => {
-  const { groupId } = req.query;
-  const { amount, description, splitType, users } = req.body;
+  const { groupId, amount, description, splitType, users } = req.body;
+
+  console.log(groupId);
 
   try {
     const expense = await createExpenseService(
