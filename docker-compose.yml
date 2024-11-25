@@ -1,0 +1,75 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: splitwise_app
+    ports:
+      - '3000:3000'
+    environment:
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_HOST: postgres # External PostgreSQL container name
+      DB_DIALECT: ${DB_DIALECT}
+      REDIS_HOST: redis # External Redis container name
+      REDIS_PORT: ${REDIS_PORT}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+    networks:
+      - splitwise_network
+
+networks:
+  splitwise_network:
+    external: true
+# version: '3.8'
+
+# services:
+#   app:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: splitwise_clone_app
+#     ports:
+#       - '4000:3000'
+#     environment:
+#       NODE_ENV: development
+#       DB_USER: ${DB_USERNAME}
+#       DB_PASSWORD: ${DB_PASSWORD}
+#       DB_NAME: ${DB_DATABASE}
+#       DB_HOST: ${DB_HOST}
+#       DB_PORT: ${DB_PORT}
+#       REDIS_HOST: ${REDIS_HOST}
+#       REDIS_PORT: ${REDIS_PORT}
+#       AWS_BUCKET_NAME: ${S3_BUCKET_NAME}
+#       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+#       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+#       JWT_SECRET: ${JWT_SECRET}
+#     depends_on:
+#       - postgres
+#       - redis
+#     volumes:
+#       - .:/app
+#       - /app/node_modules
+
+#   postgres:
+#     image: postgres
+#     container_name: postgres_db
+#     environment:
+#       POSTGRES_USER: ${DB_USERNAME}
+#       POSTGRES_PASSWORD: ${DB_PASSWORD}
+#     ports:
+#       - '5432:5432'
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+
+#   redis:
+#     image: redis:alpine
+#     container_name: redis_cache
+#     ports:
+#       - '6379:6379'
+
+# volumes:
+#   postgres_data:

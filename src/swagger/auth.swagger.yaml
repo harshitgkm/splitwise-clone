@@ -1,0 +1,185 @@
+openapi: 3.0.1
+info:
+  title: Splitwise Clone Auth API
+  description: API for user authentication in the Splitwise clone project
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Authentication-related operations
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      description: Register a new user by providing username and email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: JohnDoe
+                email:
+                  type: string
+                  example: john.doe@example.com
+              required:
+                - username
+                - email
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Registration successful. Please verify OTP.'
+        '400':
+          description: Bad Request
+
+  /auth/request-otp:
+    post:
+      tags:
+        - Auth
+      summary: Request OTP for registration or login
+      description: Generate an OTP for a given email for registration or login.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: john.doe@example.com
+              required:
+                - email
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'OTP sent to your email.'
+        '400':
+          description: Bad Request
+
+  /auth/verify-otp:
+    post:
+      tags:
+        - Auth
+      summary: Verify OTP for registration or login
+      description: Verify the OTP sent to the user's email and issue a JWT token if valid.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: john.doe@example.com
+                otp:
+                  type: string
+                  example: '123456'
+              required:
+                - email
+                - otp
+      responses:
+        '200':
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'OTP verified successfully.'
+                  token:
+                    type: string
+                    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        '401':
+          description: Invalid OTP
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Log in an existing user
+      description: Log in an existing user by providing email and validate OTP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: john.doe@example.com
+              required:
+                - email
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Login successful.'
+                  token:
+                    type: string
+                    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        '401':
+          description: Unauthorized
+
+  /auth/logout:
+    delete:
+      tags:
+        - Auth
+      summary: Log out a user
+      description: Log out a user by invalidating the JWT token.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Logged out successfully.'
+        '401':
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

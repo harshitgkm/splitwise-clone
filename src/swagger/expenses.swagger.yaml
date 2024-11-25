@@ -1,0 +1,504 @@
+openapi: 3.0.0
+info:
+  title: Expense Management API
+  description: API for managing expenses, comments, and settlements in a group.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+
+tags:
+  - name: Expenses
+    description: Operations related to expenses
+
+paths:
+  /expenses:
+    post:
+      summary: Create a new expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: groupId
+          in: query
+          description: The ID of the group associated with the expense
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: The expense details to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  description: Total amount of the expense
+                description:
+                  type: string
+                  description: Description of the expense
+                splitType:
+                  type: string
+                  enum:
+                    - EQUALLY
+                    - PERCENTAGE
+                    - SHARES
+                    - UNEQUAL
+                  description: Split type for the expense
+                users:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        description: ID of the user
+                      percentage:
+                        type: number
+                        format: float
+                        description: Percentage of the expense (required for percentage split type)
+                      shares:
+                        type: number
+                        format: float
+                        description: Shares of the expense (required for share split type)
+                      amountPaid:
+                        type: number
+                        format: float
+                        description: Amount paid by the user (required for unequal split type)
+              required:
+                - groupId
+                - amount
+                - splitType
+                - users
+      responses:
+        '200':
+          description: Expense created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The ID of the created expense
+                  amount:
+                    type: number
+                    format: float
+                    description: Total amount of the expense
+                  description:
+                    type: string
+                    description: Description of the expense
+                  splitType:
+                    type: string
+                    description: Split type for the expense
+                  createdAt:
+                    type: string
+                    format: date-time
+                    description: Timestamp when the expense was created
+        '400':
+          description: Bad request, missing or invalid data
+        '404':
+          description: Group not found
+
+    get:
+      summary: Get all expenses for a group
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: groupId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The ID of the group
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    description:
+                      type: string
+                    amount:
+                      type: number
+                      format: float
+                    splitType:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+        '400':
+          description: Invalid query parameters
+
+  /expenses/{id}:
+    get:
+      summary: Get details of a specific expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense
+      responses:
+        '200':
+          description: Expense details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  amount:
+                    type: number
+                    format: float
+                  description:
+                    type: string
+                  splitType:
+                    type: string
+                  expenseSplits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                        amountPaid:
+                          type: number
+                          format: float
+                        amountOwed:
+                          type: number
+                          format: float
+                        splitRatio:
+                          type: number
+                          format: float
+        '404':
+          description: Expense not found
+
+    put:
+      summary: Update an existing expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense to update
+      requestBody:
+        description: The updated expense details in form-data format.
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                  description: New description for the expense
+                amount:
+                  type: number
+                  format: float
+                  description: New amount for the expense
+                split_type:
+                  type: string
+                  enum:
+                    - EQUALLY
+                    - PERCENTAGE
+                    - SHARES
+                    - UNEQUAL
+                  description: New split type
+                users:
+                  type: array
+                  description: Array of users with their details
+                  items:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        description: User ID
+                      percentage:
+                        type: number
+                        format: float
+                        description: Percentage of the expense (if applicable)
+                      shares:
+                        type: number
+                        format: float
+                        description: Shares of the expense (if applicable)
+                      amountPaid:
+                        type: number
+                        format: float
+                        description: Amount paid by the user (if applicable)
+      responses:
+        '200':
+          description: Expense updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Confirmation message
+                  updatedExpense:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      description:
+                        type: string
+                      amount:
+                        type: number
+                        format: float
+                      splitType:
+                        type: string
+                      updatedAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: Invalid update data
+        '404':
+          description: Expense not found
+
+    delete:
+      summary: Delete a specific expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense to delete
+      responses:
+        '200':
+          description: Expense deleted successfully
+        '404':
+          description: Expense not found
+
+  /expenses/{id}/settle-up:
+    post:
+      summary: Settle up an expense between two users
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense to settle
+      requestBody:
+        description: The settlement details.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payerId:
+                  type: string
+                  description: The ID of the user paying
+                payeeId:
+                  type: string
+                  description: The ID of the user receiving payment
+                amount:
+                  type: number
+                  format: float
+                  description: The amount to settle
+      responses:
+        '200':
+          description: Settlement successful
+        '400':
+          description: Invalid settlement data
+        '404':
+          description: Expense or user not found
+
+  /expenses/{id}/comments:
+    post:
+      summary: Add a comment to an expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense to comment on
+      requestBody:
+        description: The comment to add.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+                  description: The text of the comment
+      responses:
+        '200':
+          description: Comment added successfully
+        '404':
+          description: Expense not found
+
+    get:
+      summary: Get all comments for a specific expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense
+      responses:
+        '200':
+          description: List of comments for the expense
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    comment:
+                      type: string
+                    userId:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time
+        '404':
+          description: Expense not found
+
+  /expenses/{id}/comments/{commentId}:
+    put:
+      summary: Update a comment on an expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the comment
+      requestBody:
+        description: The updated comment text.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Comment updated successfully
+        '404':
+          description: Expense or comment not found
+
+    delete:
+      summary: Delete a comment on an expense
+      security:
+        - bearerAuth: []
+      tags:
+        - Expenses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the expense
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the comment
+      responses:
+        '200':
+          description: Comment deleted successfully
+        '404':
+          description: Expense or comment not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    uuid:
+      type: string
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      minLength: 36
+      maxLength: 36

@@ -1,0 +1,409 @@
+openapi: 3.0.0
+info:
+  title: Group Management API
+  version: 1.0.0
+  description: API for managing groups, including creating, updating, and managing members.
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Groups
+    description: Operations related to groups
+
+paths:
+  /groups:
+    post:
+      tags:
+        - Groups
+      summary: Create a new group
+      description: >
+        Creates a new group. If `otherUsername` is provided, a two-user group is created or retrieved.
+        Otherwise, a multi-user group is created. The authenticated user will automatically be added as a member of the group.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the group
+                  example: "Friends' Trip"
+                type:
+                  type: string
+                  description: Type of the group (e.g., Friends, Family, Travel)
+                  example: Friends
+                profile_image_url:
+                  type: string
+                  description: Profile image URL for the group
+                  example: 'https://example.com/group-profile.png'
+                otherUsername:
+                  type: string
+                  description: >
+                    The username of the second user for a two-user group. 
+                    If provided, a two-user group will be created or retrieved.
+                  example: 'john_doe'
+      responses:
+        201:
+          description: Group created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: ID of the created group
+                    example: '6a97e3da-5e9b-4c3a-b7f4-118c24353089'
+                  name:
+                    type: string
+                    description: Name of the group
+                    example: "Friends' Trip"
+                  type:
+                    type: string
+                    description: Type of the group
+                    example: Friends
+                  created_by:
+                    type: string
+                    description: ID of the user who created the group
+                    example: '4d65f9e5-8888-477c-a330-f88ddf3315b5'
+                  two_user_identifier:
+                    type: string
+                    description: >
+                      Identifier for two-user groups (only applicable if the group has two members).
+                    example: 'user1-user2'
+                  profile_image_url:
+                    type: string
+                    description: Profile image URL for the group
+                    example: 'https://example.com/group-profile.png'
+        400:
+          description: Bad request
+        404:
+          description: User not found (if `otherUsername` is invalid)
+        500:
+          description: Internal server error
+    get:
+      tags:
+        - Groups
+      summary: Get all groups for the authenticated user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number for pagination
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of results per page
+          example: 10
+      responses:
+        200:
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+
+        500:
+          description: Internal server error
+
+  /groups/{id}:
+    put:
+      tags:
+        - Groups
+      summary: Update a group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the group
+                  example: 'Work Project'
+                type:
+                  type: string
+                  description: Type of the group
+                  example: work
+                profile_image_url:
+                  type: string
+                  description: New profile image URL
+                  example: 'https://example.com/updated-profile.png'
+      responses:
+        200:
+          description: Group updated successfully
+          content:
+            application/json:
+              schema:
+
+        403:
+          description: Not authorized
+        404:
+          description: Group not found
+        500:
+          description: Internal server error
+    delete:
+      tags:
+        - Groups
+      summary: Delete a group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group to delete
+      responses:
+        200:
+          description: Group deleted successfully
+        403:
+          description: Not authorized
+        404:
+          description: Group not found
+        500:
+          description: Internal server error
+
+  /groups/{id}/add-member:
+    post:
+      tags:
+        - Groups
+      summary: Add a member to a group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: Username of the user to add
+                  example: 'johndoe'
+                isAdmin:
+                  type: boolean
+                  description: Whether the user should be an admin
+                  example: false
+      responses:
+        201:
+          description: User added to the group successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'User johndoe added to the group successfully'
+        400:
+          description: Bad request
+        404:
+          description: Group or user not found
+        500:
+          description: Internal server error
+
+  /groups/{id}/members:
+    get:
+      tags:
+        - Groups
+      summary: Get all members of a group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number for pagination
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of results per page
+          example: 10
+      responses:
+        200:
+          description: List of group members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      example: '123e4567-e89b-12d3-a456-426614174000'
+                    username:
+                      type: string
+                      example: 'johndoe'
+                    email:
+                      type: string
+                      example: 'johndoe@example.com'
+                    is_admin:
+                      type: boolean
+                      example: true
+                    joined_at:
+                      type: string
+                      format: date-time
+                      example: '2024-11-24T12:34:56Z'
+        404:
+          description: Group not found
+        500:
+          description: Internal server error
+
+  /groups/{id}/leave:
+    post:
+      tags:
+        - Groups
+      summary: Leave a group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group to leave
+      responses:
+        200:
+          description: Successfully left the group
+        404:
+          description: Group or user not found
+        500:
+          description: Internal server error
+
+  /groups/{id}/users/{userId}:
+    delete:
+      tags:
+        - Groups
+      summary: Remove a user from a group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the user to remove
+      responses:
+        200:
+          description: User removed from the group successfully
+        404:
+          description: Group or user not found
+        500:
+          description: Internal server error
+
+  /groups/{id}/invite:
+    post:
+      tags:
+        - Groups
+      summary: Send an invitation to a user to join the group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group to send an invite to
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: Email of the user to invite
+                  example: 'user@example.com'
+      responses:
+        200:
+          description: Invitation sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Invitation sent successfully to user@example.com'
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        404:
+          description: Group not found
+        500:
+          description: Internal server error
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    uuid:
+      type: string
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      minLength: 36
+      maxLength: 36

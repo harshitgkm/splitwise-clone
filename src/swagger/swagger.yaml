@@ -1,0 +1,22 @@
+openapi: 3.0.1
+info:
+  title: Splitwise Clone API
+  description: API documentation for the Splitwise clone project
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Authentication-related operations
+  - name: Users
+    description: User-related operations
+  - name: Groups
+    description: Groups-related operations
+  - name: Expenses
+    description: Expenses-related operations
+
+paths: {}
+components: {}

@@ -1,0 +1,276 @@
+openapi: 3.0.3
+info:
+  title: User APIs - Splitwise Clone
+  description: API documentation for user-related operations in the Splitwise clone project.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: http://localhost:3000/api
+    description: Local server
+tags:
+  - name: Users
+    description: Users-related operations
+
+paths:
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: '1'
+                username:
+                  type: string
+                  example: 'JohnDoe'
+                email:
+                  type: string
+                  example: 'johndoe@example.com'
+                profile_picture_url:
+                  type: string
+                  example: 'https://s3.example.com/johndoe.jpg'
+        401:
+          description: Unauthorized. Token is missing or invalid.
+
+  /users/me/{id}:
+    put:
+      tags:
+        - Users
+      summary: Update user profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the user to update
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: new_username
+                profile_image:
+                  type: string
+                  format: binary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+
+  /users/outstanding-balance:
+    get:
+      tags:
+        - Users
+      summary: Get user's outstanding balance
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Outstanding balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  outstanding_balance:
+                    type: number
+                    example: 250.75
+
+  /users/friends:
+    post:
+      tags:
+        - Users
+      summary: Add a new friend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: johndoe
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Friendship created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Friendship created successfully with JohnDoe
+                  friend:
+                    type: string
+                    example: JohnDoe
+    get:
+      tags:
+        - Users
+      summary: Get list of friends
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Friends list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Friend'
+  /users/friends/{id}:
+    delete:
+      tags:
+        - Users
+      summary: Remove a friend
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the friend to be removed
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Friendship removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Friendship removed successfully with friend ID 123e4567-e89b-12d3-a456-426614174000
+        '400':
+          description: Bad request. Invalid or missing data.
+
+  /users/payments:
+    get:
+      tags:
+        - Users
+      summary: Get all payments for the user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            example: 10
+      responses:
+        '200':
+          description: Payments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+
+  /users/generate-report:
+    get:
+      tags:
+        - Users
+      summary: Generate an expense report for the user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Expense report generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseReport'
+
+  /users/report-pdf:
+    get:
+      tags:
+        - Users
+      summary: Generate and upload an expense report PDF
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Expense report PDF uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  s3_url:
+                    type: string
+                    example: https://s3.amazonaws.com/bucket-name/expense-report.pdf
+
+  /users/reports:
+    get:
+      tags:
+        - Users
+      summary: Get all reports for the user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            example: 10
+      responses:
+        '200':
+          description: Reports retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    uuid:
+      type: string
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      minLength: 36
+      maxLength: 36
