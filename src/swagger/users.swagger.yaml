@@ -109,9 +109,9 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                username:
                   type: string
-                  example: 123e4567-e89b-12d3-a456-426614174000
+                  example: johndoe
       security:
         - bearerAuth: []
       responses:
@@ -120,7 +120,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Friend'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Friendship created successfully with JohnDoe
+                  friend:
+                    type: string
+                    example: JohnDoe
     get:
       tags:
         - Users
@@ -136,6 +143,34 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Friend'
+  /users/friends/{id}:
+    delete:
+      tags:
+        - Users
+      summary: Remove a friend
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the friend to be removed
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Friendship removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Friendship removed successfully with friend ID 123e4567-e89b-12d3-a456-426614174000
+        '400':
+          description: Bad request. Invalid or missing data.
 
   /users/payments:
     get:

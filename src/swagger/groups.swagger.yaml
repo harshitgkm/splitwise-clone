@@ -18,6 +18,9 @@ paths:
       tags:
         - Groups
       summary: Create a new group
+      description: >
+        Creates a new group. If `otherUsername` is provided, a two-user group is created or retrieved.
+        Otherwise, a multi-user group is created. The authenticated user will automatically be added as a member of the group.
       security:
         - bearerAuth: []
       requestBody:
@@ -33,21 +36,55 @@ paths:
                   example: "Friends' Trip"
                 type:
                   type: string
-                  description: Type of the group (e.g., personal, travel)
-                  example: travel
+                  description: Type of the group (e.g., Friends, Family, Travel)
+                  example: Friends
                 profile_image_url:
                   type: string
                   description: Profile image URL for the group
                   example: 'https://example.com/group-profile.png'
+                otherUsername:
+                  type: string
+                  description: >
+                    The username of the second user for a two-user group. 
+                    If provided, a two-user group will be created or retrieved.
+                  example: 'john_doe'
       responses:
         201:
           description: Group created successfully
           content:
             application/json:
               schema:
-
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: ID of the created group
+                    example: '6a97e3da-5e9b-4c3a-b7f4-118c24353089'
+                  name:
+                    type: string
+                    description: Name of the group
+                    example: "Friends' Trip"
+                  type:
+                    type: string
+                    description: Type of the group
+                    example: Friends
+                  created_by:
+                    type: string
+                    description: ID of the user who created the group
+                    example: '4d65f9e5-8888-477c-a330-f88ddf3315b5'
+                  two_user_identifier:
+                    type: string
+                    description: >
+                      Identifier for two-user groups (only applicable if the group has two members).
+                    example: 'user1-user2'
+                  profile_image_url:
+                    type: string
+                    description: Profile image URL for the group
+                    example: 'https://example.com/group-profile.png'
         400:
           description: Bad request
+        404:
+          description: User not found (if `otherUsername` is invalid)
         500:
           description: Internal server error
     get:
@@ -174,10 +211,10 @@ paths:
             schema:
               type: object
               properties:
-                userId:
+                username:
                   type: string
-                  description: ID of the user to add
-                  example: '123'
+                  description: Username of the user to add
+                  example: 'johndoe'
                 isAdmin:
                   type: boolean
                   description: Whether the user should be an admin
@@ -185,10 +222,77 @@ paths:
       responses:
         201:
           description: User added to the group successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'User johndoe added to the group successfully'
         400:
           description: Bad request
         404:
           description: Group or user not found
+        500:
+          description: Internal server error
+
+  /groups/{id}/members:
+    get:
+      tags:
+        - Groups
+      summary: Get all members of a group
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the group
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number for pagination
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of results per page
+          example: 10
+      responses:
+        200:
+          description: List of group members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      example: '123e4567-e89b-12d3-a456-426614174000'
+                    username:
+                      type: string
+                      example: 'johndoe'
+                    email:
+                      type: string
+                      example: 'johndoe@example.com'
+                    is_admin:
+                      type: boolean
+                      example: true
+                    joined_at:
+                      type: string
+                      format: date-time
+                      example: '2024-11-24T12:34:56Z'
+        404:
+          description: Group not found
         500:
           description: Internal server error
 
