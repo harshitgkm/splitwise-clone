@@ -1,4 +1,4 @@
-const { Group, GroupMember, User, Payment } = require('../src/models');
+const { Group, GroupMember, User, Payment } = require('../../src/models');
 const {
   createGroupService,
   getGroupsService,
@@ -8,10 +8,10 @@ const {
   leaveGroupService,
   removeUserService,
   getAllPaymentsInGroupService,
-} = require('../src/services/groups.service');
+} = require('../../src/services/groups.service');
 const { faker } = require('@faker-js/faker');
 
-jest.mock('../src/models', () => ({
+jest.mock('../../src/models', () => ({
   Group: {
     create: jest.fn(),
     findAll: jest.fn(),

@@ -5,28 +5,28 @@ const {
   requestOtpService,
   validateOtp,
   logoutUser,
-} = require('../src/services/auth.service');
-const { User } = require('../src/models');
-const { redisClient } = require('../src/config/redis');
-const { sendOtpEmail } = require('../src/helpers/mail.helper');
+} = require('../../src/services/auth.service');
+const { User } = require('../../src/models');
+const { redisClient } = require('../../src/config/redis');
+const { sendOtpEmail } = require('../../src/helpers/mail.helper');
 const {
   generateOtp,
   verifyOtp,
   saveOtp,
-} = require('../src/helpers/otp.helper');
+} = require('../../src/helpers/otp.helper');
 const jwt = require('jsonwebtoken');
 const { faker } = require('@faker-js/faker');
 
-jest.mock('../src/models');
-jest.mock('../src/config/redis');
-jest.mock('../src/helpers/mail.helper');
-jest.mock('../src/helpers/otp.helper');
+jest.mock('../../src/models');
+jest.mock('../../src/config/redis');
+jest.mock('../../src/helpers/mail.helper');
+jest.mock('../../src/helpers/otp.helper');
 jest.mock('jsonwebtoken');
 
-jest.mock('../src/helpers/mail.helper', () => ({
+jest.mock('../../src/helpers/mail.helper', () => ({
   sendOtpEmail: jest.fn(),
 }));
-jest.mock('../src/helpers/otp.helper', () => ({
+jest.mock('../../src/helpers/otp.helper', () => ({
   generateOtp: jest.fn(),
   verifyOtp: jest.fn(),
   saveOtp: jest.fn(),
@@ -56,7 +56,6 @@ describe('Auth Service', () => {
   });
 
   afterEach(() => {
-    // Reset mocks after each test
     jest.clearAllMocks();
   });
 

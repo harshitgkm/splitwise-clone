@@ -1,4 +1,4 @@
-jest.mock('../src/models', () => ({
+jest.mock('../../src/models', () => ({
   Group: {
     findByPk: jest.fn(),
     getUsers: jest.fn(),
@@ -31,7 +31,7 @@ jest.mock('../src/models', () => ({
   },
 }));
 
-jest.mock('../src/helpers/mail.helper.js', () => ({
+jest.mock('../../src/helpers/mail.helper.js', () => ({
   sendExpenseNotification: jest.fn(),
 }));
 
@@ -46,7 +46,7 @@ const {
   getCommentsService,
   updateCommentService,
   deleteCommentService,
-} = require('../src/services/expenses.service');
+} = require('../../src/services/expenses.service');
 
 const {
   Group,
@@ -55,8 +55,8 @@ const {
   User,
   Payment,
   Comment,
-} = require('../src/models');
-const { sendExpenseNotification } = require('../src/helpers/mail.helper.js');
+} = require('../../src/models');
+const { sendExpenseNotification } = require('../../src/helpers/mail.helper.js');
 
 describe('Expense Service Tests', () => {
   afterEach(() => {
