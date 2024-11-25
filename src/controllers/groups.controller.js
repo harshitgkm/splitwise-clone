@@ -15,15 +15,15 @@ const { uploadFileToS3 } = require('../helpers/aws.helper.js');
 
 const createGroup = async (req, res, next) => {
   try {
-    const groupData = req.body;
     const userId = req.user.id;
+    const groupData = { ...req.body, userId };
 
-    const group = await createGroupService(userId, groupData);
+    const group = await createGroupService(groupData);
     res.data = group;
     next();
   } catch (error) {
     console.error(error);
-    res.json({ message: 'Error creating group' });
+    res.json({ message: 'Error creating group', error: error.message });
   }
 };
 

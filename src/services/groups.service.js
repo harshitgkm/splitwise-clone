@@ -1,13 +1,66 @@
 const { Group, GroupMember, User, Payment } = require('../models');
 const { sendMail } = require('../helpers/mail.helper.js');
-const createGroupService = async (userId, groupData) => {
-  const { name, type, profile_image_url } = groupData;
 
+const generateTwoUserIdentifier = (userId1, userId2) => {
+  const sortedIds = [userId1, userId2].sort();
+  return `${sortedIds[0]}-${sortedIds[1]}`;
+};
+
+const createGroupService = async groupData => {
+  const { name, type, username: otherUsername, userId } = groupData;
+
+  // if otherUsername is provided, handle two-user group logic
+  if (otherUsername) {
+    const otherUser = await User.findOne({
+      where: { username: otherUsername },
+    });
+    if (!otherUser) {
+      throw new Error(`User with username "${otherUsername}" not found`);
+    }
+
+    const otherUserId = otherUser.id;
+    const twoUserIdentifier = generateTwoUserIdentifier(userId, otherUserId);
+
+    let group = await Group.findOne({
+      where: { two_user_identifier: twoUserIdentifier },
+    });
+
+    if (group) {
+      throw new Error('You already have one-one group with this user');
+    }
+
+    if (!group) {
+      group = await Group.create({
+        name: otherUsername,
+        type: 'Two-User',
+        two_user_identifier: twoUserIdentifier,
+        created_by: userId,
+      });
+
+      await GroupMember.bulkCreate([
+        {
+          user_id: userId,
+          group_id: group.id,
+          is_admin: true,
+          joined_at: new Date(),
+        },
+        {
+          user_id: otherUserId,
+          group_id: group.id,
+          is_admin: false,
+          joined_at: new Date(),
+        },
+      ]);
+    }
+
+    return group;
+  }
+
+  //handle multi-user groups
   const group = await Group.create({
     name,
-    created_by: userId,
     type,
-    profile_image_url,
+    created_by: userId,
   });
 
   await GroupMember.create({
