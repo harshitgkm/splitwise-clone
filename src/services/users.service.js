@@ -96,7 +96,7 @@ const getFriends = async (userId, page = 1, limit = 10) => {
     offset,
   });
 
-  const friendNames = await Promise.all(
+  const friendDetails = await Promise.all(
     friends.map(async friend => {
       const friendId =
         friend.user_id === userId ? friend.friend_id : friend.user_id;
@@ -108,11 +108,40 @@ const getFriends = async (userId, page = 1, limit = 10) => {
         attributes: ['username'],
       });
 
-      return friendUser ? friendUser.username : 'Unknown';
+      const friendName = friendUser ? friendUser.username : 'Unknown';
+
+      const totalAmountOwed = await ExpenseSplit.sum('amount_owed', {
+        where: {
+          user_id: friendId,
+          expense_id: {
+            [Sequelize.Op.in]: Sequelize.literal(
+              `(
+                SELECT id 
+                FROM expenses 
+                WHERE group_id IN (
+                  SELECT id 
+                  FROM groups 
+                  WHERE EXISTS (
+                    SELECT 1 
+                    FROM group_members 
+                    WHERE user_id = '${userId}' AND group_id = groups.id
+                  )
+                )
+              )`,
+            ),
+          },
+        },
+      });
+
+      return {
+        id: friendId,
+        username: friendName,
+        amountOwed: totalAmountOwed || 0,
+      };
     }),
   );
 
-  return friendNames;
+  return friendDetails;
 };
 
 const removeFriendService = async (friendId, userId) => {

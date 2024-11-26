@@ -117,7 +117,7 @@ const getAllPaymentsForUser = async (req, res, next) => {
       parseInt(limit, 10),
     );
 
-    res.data = result; // Includes totals, payments, and pagination
+    res.data = result;
     next();
   } catch (err) {
     console.error('Error in getAllPaymentsForUser:', err);
