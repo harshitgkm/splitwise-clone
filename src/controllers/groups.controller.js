@@ -16,7 +16,8 @@ const { uploadFileToS3 } = require('../helpers/aws.helper.js');
 const createGroup = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const groupData = { ...req.body, userId };
+    const my_username = req.user.username;
+    const groupData = { ...req.body, userId, my_username };
 
     const group = await createGroupService(groupData);
     res.data = group;
