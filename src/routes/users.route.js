@@ -38,7 +38,7 @@ const router = express.Router();
 router.get('/me', verifyToken, getUserProfile, userSerializer);
 
 router.put(
-  '/me/:id',
+  '/me',
   updateUserValidator,
   verifyToken,
   upload.single('profile_image'),
@@ -79,7 +79,7 @@ router.get(
   generateExpenseReportSerializer,
 );
 
-router.get(
+router.post(
   '/report-pdf',
   verifyToken,
   exportReportToPDF,
