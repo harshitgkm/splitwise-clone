@@ -84,12 +84,16 @@ const addFriendService = async (friend_one, friend_username) => {
   };
 };
 
-const getFriends = async userId => {
+const getFriends = async (userId, page = 1, limit = 10) => {
+  const offset = (page - 1) * limit;
+
   const friends = await FriendList.findAll({
     where: Sequelize.literal(
       `"friend_one" = CAST('${userId}' AS UUID) OR "friend_two" = CAST('${userId}' AS UUID)`,
     ),
     attributes: ['friend_one', 'friend_two'],
+    limit,
+    offset,
   });
 
   const friendNames = await Promise.all(
@@ -112,23 +116,27 @@ const getFriends = async userId => {
 };
 
 const removeFriendService = async (friendId, userId) => {
-  const friendship = await FriendList.findOne({
-    id: friendId,
-    where: Sequelize.literal(
-      `"friend_one" = CAST('${userId}' AS UUID) OR "friend_two" = CAST('${userId}' AS UUID)`,
+  const existingFriendship = await FriendList.findOne({
+    where: Op.or(
+      Op.literal(
+        `"friend_one" = CAST('${friendId}' AS UUID) AND "friend_two" = CAST('${userId}' AS UUID)`,
+      ),
+      Op.literal(
+        `"friend_one" = CAST('${userId}' AS UUID) AND "friend_two" = CAST('${friendId}' AS UUID)`,
+      ),
     ),
   });
 
-  if (!friendship) {
-    return { message: 'Friendship not found' };
+  if (!existingFriendship) {
+    throw new Error('Friendship does not exists');
   }
 
-  await friendship.destroy();
+  await existingFriendship.destroy();
 };
 
 const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
-  const payments = await Payment.findAll({
+  const { count, rows: payments } = await Payment.findAndCountAll({
     where: Op.or(
       Op.literal(`"payer_id" = CAST('${userId}' AS UUID)`),
       Op.literal(`"payee_id" = CAST('${userId}' AS UUID)`),
@@ -137,12 +145,21 @@ const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
     limit: limit,
     offset: offset,
   });
-
-  return payments;
+  return {
+    payments,
+    pagination: {
+      totalItems: count,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      itemsPerPage: limit,
+    },
+  };
 };
 
-const generateExpenseReportService = async userId => {
+const generateExpenseReportService = async (userId, page = 1, limit = 10) => {
   try {
+    const offset = (page - 1) * limit;
+
     const totalPaid = await ExpenseSplit.findAll({
       where: { user_id: userId },
       attributes: [
@@ -162,7 +179,7 @@ const generateExpenseReportService = async userId => {
     const totalPaidAmount = parseFloat(totalPaid[0].totalPaid || 0);
     const totalOwedAmount = parseFloat(totalOwed[0].totalOwed || 0);
 
-    const payments = await ExpenseSplit.findAll({
+    const paymentsResult = await ExpenseSplit.findAndCountAll({
       where: { user_id: userId },
       include: [
         {
@@ -182,9 +199,10 @@ const generateExpenseReportService = async userId => {
         },
       ],
       attributes: ['amount_paid', 'amount_owed', 'created_at'],
+      limit,
+      offset,
     });
-
-    const expenses = await Expense.findAll({
+    const expensesResult = await Expense.findAndCountAll({
       include: [
         {
           model: ExpenseSplit,
@@ -198,37 +216,31 @@ const generateExpenseReportService = async userId => {
         },
       ],
       attributes: ['id', 'description', 'amount', 'created_at'],
+      limit,
+      offset,
     });
-
-    const paymentRecords = payments.map(payment => {
-      const expense = payment.Expense;
-      return {
-        amountPaid: payment.amount_paid,
-        amountOwed: payment.amount_owed,
-        expenseDescription: expense ? expense.description : 'Unknown',
-        groupName: expense && expense.Group ? expense.Group.name : 'No Group',
-        createdAt: payment.created_at,
-      };
-    });
-
-    const userExpenses = expenses.map(expense => ({
-      id: expense.id,
-      description: expense.description,
-      amount: expense.amount,
-      createdAt: expense.created_at,
-      groupName: expense.Group ? expense.Group.name : 'No Group',
-      splits: expense.expenseSplits.map(split => ({
-        amountPaid: split.amount_paid,
-        amountOwed: split.amount_owed,
-        splitRatio: split.split_ratio,
-      })),
-    }));
 
     return {
       totalPaid: totalPaidAmount,
       totalOwed: totalOwedAmount,
-      paymentRecords,
-      userExpenses,
+      paymentRecords: {
+        data: paymentsResult.rows,
+        pagination: {
+          totalItems: paymentsResult.count,
+          currentPage: page,
+          totalPages: Math.ceil(paymentsResult.count / limit),
+          itemsPerPage: limit,
+        },
+      },
+      userExpenses: {
+        data: expensesResult.rows,
+        pagination: {
+          totalItems: expensesResult.count,
+          currentPage: page,
+          totalPages: Math.ceil(expensesResult.count / limit),
+          itemsPerPage: limit,
+        },
+      },
     };
   } catch (error) {
     console.error('Error generating expense report:', error);
