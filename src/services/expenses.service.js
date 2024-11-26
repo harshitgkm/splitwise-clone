@@ -173,12 +173,27 @@ const createExpenseService = async (
 const getAllExpensesService = async (groupId, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
 
+  const totalExpensesCount = await Expense.count({
+    where: { group_id: groupId },
+  });
+
   const expenses = await Expense.findAll({
     where: { group_id: groupId },
     limit: limit,
     offset: offset,
   });
-  return expenses;
+
+  const totalPages = Math.ceil(totalExpensesCount / limit);
+
+  return {
+    expenses,
+    pagination: {
+      total: totalExpensesCount,
+      page,
+      limit,
+      totalPages,
+    },
+  };
 };
 
 const getExpenseDetailsService = async expenseId => {
@@ -254,6 +269,7 @@ const getExpenseDetailsService = async expenseId => {
     oweDetails,
   };
 };
+
 const updateExpenseService = async ({
   expenseId,
   description,

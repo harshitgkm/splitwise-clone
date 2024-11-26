@@ -35,7 +35,11 @@ const getAllExpenses = async (req, res, next) => {
   const groupId = req.query.groupId;
   const { page = 1, limit = 10 } = req.query;
   try {
-    const expenses = await getAllExpensesService(groupId, page, limit);
+    const expenses = await getAllExpensesService(
+      groupId,
+      parseInt(page, 10),
+      parseInt(limit, 10),
+    );
     res.data = expenses;
     next();
   } catch (error) {
