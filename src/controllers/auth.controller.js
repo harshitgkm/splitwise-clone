@@ -26,7 +26,8 @@ const register = async (req, res) => {
       EX: 1800,
     });
 
-    res.json({ message: 'redirect to request-otp' });
+    await requestOtpService(email);
+    return res.json({ message: 'OTP sent to your email for registration' });
   } catch (err) {
     res.json({ error: err.message });
   }
