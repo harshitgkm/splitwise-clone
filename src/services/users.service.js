@@ -42,7 +42,7 @@ const calculateOutstandingBalance = async userId => {
   return outstandingBalance;
 };
 
-const addFriendService = async (friend_one, friend_username) => {
+const addFriendService = async (user_id, friend_username) => {
   const friend = await User.findOne({
     where: { username: friend_username },
     attributes: ['id', 'username'],
@@ -52,19 +52,19 @@ const addFriendService = async (friend_one, friend_username) => {
     throw new Error('User with this username not found');
   }
 
-  const friend_two = friend.id;
+  const friend_id = friend.id;
 
-  if (friend_one === friend_two) {
+  if (user_id === friend_id) {
     throw new Error('You cannot add yourself as a friend');
   }
 
   const existingFriendship = await FriendList.findOne({
     where: Op.or(
       Op.literal(
-        `"friend_one" = CAST('${friend_one}' AS UUID) AND "friend_two" = CAST('${friend_two}' AS UUID)`,
+        `"user_id" = CAST('${user_id}' AS UUID) AND "friend_id" = CAST('${friend_id}' AS UUID)`,
       ),
       Op.literal(
-        `"friend_one" = CAST('${friend_two}' AS UUID) AND "friend_two" = CAST('${friend_one}' AS UUID)`,
+        `"user_id" = CAST('${friend_id}' AS UUID) AND "friend_id" = CAST('${user_id}' AS UUID)`,
       ),
     ),
   });
@@ -74,8 +74,8 @@ const addFriendService = async (friend_one, friend_username) => {
   }
 
   await FriendList.create({
-    friend_one: friend_one,
-    friend_two: friend_two,
+    user_id: user_id,
+    friend_id: friend_id,
   });
 
   return {
@@ -89,9 +89,9 @@ const getFriends = async (userId, page = 1, limit = 10) => {
 
   const friends = await FriendList.findAll({
     where: Sequelize.literal(
-      `"friend_one" = CAST('${userId}' AS UUID) OR "friend_two" = CAST('${userId}' AS UUID)`,
+      `"user_id" = CAST('${userId}' AS UUID) OR "friend_id" = CAST('${userId}' AS UUID)`,
     ),
-    attributes: ['friend_one', 'friend_two'],
+    attributes: ['user_id', 'friend_id'],
     limit,
     offset,
   });
@@ -99,7 +99,7 @@ const getFriends = async (userId, page = 1, limit = 10) => {
   const friendNames = await Promise.all(
     friends.map(async friend => {
       const friendId =
-        friend.friend_one === userId ? friend.friend_two : friend.friend_one;
+        friend.user_id === userId ? friend.friend_id : friend.user_id;
 
       const friendUser = await User.findOne({
         where: {
@@ -119,10 +119,10 @@ const removeFriendService = async (friendId, userId) => {
   const existingFriendship = await FriendList.findOne({
     where: Op.or(
       Op.literal(
-        `"friend_one" = CAST('${friendId}' AS UUID) AND "friend_two" = CAST('${userId}' AS UUID)`,
+        `"user_id" = CAST('${friendId}' AS UUID) AND "friend_id" = CAST('${userId}' AS UUID)`,
       ),
       Op.literal(
-        `"friend_one" = CAST('${userId}' AS UUID) AND "friend_two" = CAST('${friendId}' AS UUID)`,
+        `"user_id" = CAST('${userId}' AS UUID) AND "friend_id" = CAST('${friendId}' AS UUID)`,
       ),
     ),
   });
