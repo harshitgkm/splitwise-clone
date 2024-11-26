@@ -13,19 +13,21 @@ const createGroupSerializer = (req, res) => {
 
   res.status(201).json(resultData);
 };
-
 const getGroupsSerializer = (req, res) => {
-  const receivedData = res.data || [];
-  console.log('Received Data:', receivedData);
+  const receivedData = res.data || { groups: [], pagination: {} };
+  const { groups, pagination } = receivedData;
 
-  const resultData = receivedData.map(group => ({
+  const serializedGroups = groups.map(group => ({
     groupId: group.groupId,
     name: group.groupName,
     type: group.groupType,
     profileImageUrl: group.profileImageUrl || null,
   }));
 
-  res.status(200).json(resultData);
+  res.status(200).json({
+    groups: serializedGroups,
+    pagination,
+  });
 };
 
 const updateGroupSerializer = (req, res) => {
@@ -98,21 +100,26 @@ const getAllPaymentsForGroupSerializer = (req, res) => {
 };
 
 const getAllMembersSerializer = (req, res) => {
-  console.log(res.data);
   const receivedData = res.data || {};
-  let resultData = {};
+  const { members = [], pagination = {} } = receivedData;
 
-  if (receivedData) {
-    resultData = receivedData.map(member => ({
-      username: member.username || '',
-      email: member.email || '',
-      profilePicture: member.profile_picture_url || '',
-      isAdmin: member.is_admin || '',
-      joinedAt: member.joined_at || '',
-    }));
-  }
+  const serializedMembers = members.map(member => ({
+    username: member.username || '',
+    email: member.email || '',
+    profilePicture: member.profilePicture || '',
+    isAdmin: member.isAdmin || false,
+    joinedAt: member.joinedAt || '',
+  }));
 
-  res.status(201).json(resultData);
+  res.status(200).json({
+    members: serializedMembers,
+    pagination: {
+      total: pagination.total || 0,
+      page: pagination.page || 1,
+      limit: pagination.limit || 10,
+      totalPages: pagination.totalPages || 1,
+    },
+  });
 };
 
 module.exports = {
