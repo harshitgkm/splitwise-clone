@@ -38,7 +38,7 @@ const router = express.Router();
 router.get('/me', verifyToken, getUserProfile, userSerializer);
 
 router.put(
-  '/me',
+  '/:id',
   updateUserValidator,
   verifyToken,
   upload.single('profile_image'),
