@@ -111,16 +111,17 @@ const getAllPaymentsForUser = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
-    const { payments, pagination } = await getAllPaymentsService(
+    const result = await getAllPaymentsService(
       userId,
       parseInt(page, 10),
       parseInt(limit, 10),
     );
 
-    res.data = { payments, pagination };
+    res.data = result; // Includes totals, payments, and pagination
     next();
   } catch (err) {
-    res.json({ error: err.message });
+    console.error('Error in getAllPaymentsForUser:', err);
+    res.status(500).json({ error: err.message });
   }
 };
 

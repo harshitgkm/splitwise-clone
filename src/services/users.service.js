@@ -136,6 +136,22 @@ const removeFriendService = async (friendId, userId) => {
 
 const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
+  const [totalPaidResult, totalOwedResult] = await Promise.all([
+    ExpenseSplit.findOne({
+      where: { user_id: userId },
+      attributes: [
+        [Sequelize.fn('sum', Sequelize.col('amount_paid')), 'totalPaid'],
+      ],
+      raw: true,
+    }),
+    ExpenseSplit.findOne({
+      where: { user_id: userId },
+      attributes: [
+        [Sequelize.fn('sum', Sequelize.col('amount_owed')), 'totalOwed'],
+      ],
+      raw: true,
+    }),
+  ]);
   const { count, rows: payments } = await Payment.findAndCountAll({
     where: Op.or(
       Op.literal(`"payer_id" = CAST('${userId}' AS UUID)`),
@@ -146,6 +162,8 @@ const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
     offset: offset,
   });
   return {
+    totalPaidResult,
+    totalOwedResult,
     payments,
     pagination: {
       totalItems: count,
@@ -160,48 +178,6 @@ const generateExpenseReportService = async (userId, page = 1, limit = 10) => {
   try {
     const offset = (page - 1) * limit;
 
-    const totalPaid = await ExpenseSplit.findAll({
-      where: { user_id: userId },
-      attributes: [
-        [Sequelize.fn('sum', Sequelize.col('amount_paid')), 'totalPaid'],
-      ],
-      raw: true,
-    });
-
-    const totalOwed = await ExpenseSplit.findAll({
-      where: { user_id: userId },
-      attributes: [
-        [Sequelize.fn('sum', Sequelize.col('amount_owed')), 'totalOwed'],
-      ],
-      raw: true,
-    });
-
-    const totalPaidAmount = parseFloat(totalPaid[0].totalPaid || 0);
-    const totalOwedAmount = parseFloat(totalOwed[0].totalOwed || 0);
-
-    const paymentsResult = await ExpenseSplit.findAndCountAll({
-      where: { user_id: userId },
-      include: [
-        {
-          model: Expense,
-          include: [
-            {
-              model: Group,
-              attributes: ['name'],
-            },
-            {
-              model: ExpenseSplit,
-              as: 'expenseSplits',
-              attributes: ['amount_paid', 'amount_owed', 'split_ratio'],
-            },
-          ],
-          attributes: ['description', 'amount', 'created_at'],
-        },
-      ],
-      attributes: ['amount_paid', 'amount_owed', 'created_at'],
-      limit,
-      offset,
-    });
     const expensesResult = await Expense.findAndCountAll({
       include: [
         {
@@ -221,17 +197,6 @@ const generateExpenseReportService = async (userId, page = 1, limit = 10) => {
     });
 
     return {
-      totalPaid: totalPaidAmount,
-      totalOwed: totalOwedAmount,
-      paymentRecords: {
-        data: paymentsResult.rows,
-        pagination: {
-          totalItems: paymentsResult.count,
-          currentPage: page,
-          totalPages: Math.ceil(paymentsResult.count / limit),
-          itemsPerPage: limit,
-        },
-      },
       userExpenses: {
         data: expensesResult.rows,
         pagination: {
@@ -244,7 +209,7 @@ const generateExpenseReportService = async (userId, page = 1, limit = 10) => {
     };
   } catch (error) {
     console.error('Error generating expense report:', error);
-    throw new Error('Failed to generate report data');
+    throw new Error('Failed to generate expense report');
   }
 };
 

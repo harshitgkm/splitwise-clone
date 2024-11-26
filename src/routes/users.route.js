@@ -66,14 +66,14 @@ router.get('/friends', verifyToken, getFriendsList, getFriendsListSerializer);
 router.delete('/friends/:id', verifyToken, removeFriend);
 
 router.get(
-  '/payments',
+  '/payment-report',
   verifyToken,
   getAllPaymentsForUser,
   getAllPaymentsSerializer,
 );
 
 router.get(
-  '/generate-report',
+  '/expense-report',
   verifyToken,
   generateExpenseReport,
   generateExpenseReportSerializer,
