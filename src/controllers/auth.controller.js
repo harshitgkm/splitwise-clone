@@ -57,6 +57,12 @@ const requestOtp = async (req, res) => {
     const userKey = `register:${email}`;
     const userDetails = await redisClient.get(userKey);
 
+    const ifUserExist = await checkExistingUser(email);
+    if (ifUserExist) {
+      await requestOtpService(email);
+      return res.json({ message: 'OTP sent to your email for login' });
+    }
+
     if (!userDetails) {
       return res.status(404).json({
         message:
