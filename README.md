@@ -62,7 +62,7 @@ A comprehensive expense management application designed to help users manage gro
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-repo/splitwise-clone.git
+   git clone https://github.com/harshitgkm/splitwise-clone
    cd splitwise-clone
    ```
 

@@ -23,7 +23,7 @@ describe('JWT Helper', () => {
 
   describe('generateInviteToken', () => {
     it('should generate a token with the correct payload', () => {
-      jwt.sign.mockReturnValue(mockToken); // Mock jwt.sign return value
+      jwt.sign.mockReturnValue(mockToken);
 
       const token = generateInviteToken(mockGroupId, mockEmail);
 

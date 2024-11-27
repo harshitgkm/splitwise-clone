@@ -4,97 +4,96 @@ const {
   updateGroup,
   deleteGroup,
   addMemberToGroup,
+  getGroupMembers,
   leaveGroup,
   removeUser,
   getAllPaymentsForGroup,
+  sendGroupInvite,
 } = require('../../src/controllers/groups.controller');
+
 const {
   createGroupService,
   getGroupsService,
   updateGroupService,
   deleteGroupService,
   addGroupMember,
+  fetchGroupMembers,
   leaveGroupService,
   removeUserService,
   getAllPaymentsInGroupService,
+  sendInviteEmail,
 } = require('../../src/services/groups.service');
+
 const { uploadFileToS3 } = require('../../src/helpers/aws.helper');
 
 jest.mock('../../src/services/groups.service');
 jest.mock('../../src/helpers/aws.helper');
 
 describe('Group Controller', () => {
-  let req;
-  let res;
+  let req, res, next;
 
   beforeEach(() => {
     req = {
-      user: { id: 'user123' },
-      body: {},
+      user: { id: 1, username: 'test_user' },
       params: {},
+      body: {},
       query: {},
     };
-
     res = {
+      data: null,
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     };
-  });
-
-  afterEach(() => {
+    next = jest.fn();
     jest.clearAllMocks();
   });
 
   describe('createGroup', () => {
     it('should create a group successfully', async () => {
-      const groupData = { name: 'Test Group' };
-      req.body = groupData;
-      createGroupService.mockResolvedValue({
-        id: 'group123',
-        name: 'Test Group',
-      });
+      const mockGroup = { id: 1, name: 'Test Group' };
+      createGroupService.mockResolvedValue(mockGroup);
 
-      await createGroup(req, res);
+      req.body = { name: 'Test Group' };
+      await createGroup(req, res, next);
 
-      expect(createGroupService).toHaveBeenCalledWith('user123', groupData);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith({
-        message: 'Group created successfully',
-        group: { id: 'group123', name: 'Test Group' },
+      expect(createGroupService).toHaveBeenCalledWith({
+        ...req.body,
+        userId: req.user.id,
+        my_username: req.user.username,
       });
+      expect(res.data).toEqual(mockGroup);
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors when creating a group', async () => {
-      const error = new Error('Database error');
-      createGroupService.mockRejectedValue(error);
+    it('should handle errors during group creation', async () => {
+      createGroupService.mockRejectedValue(new Error('Error creating group'));
 
-      await createGroup(req, res);
+      await createGroup(req, res, next);
 
       expect(res.json).toHaveBeenCalledWith({
         message: 'Error creating group',
+        error: 'Error creating group',
       });
     });
   });
 
   describe('getGroups', () => {
-    it('should retrieve groups successfully', async () => {
-      const groups = [{ id: 'group123', name: 'Test Group' }];
-      req.query.page = 1;
-      req.query.limit = 10;
-      getGroupsService.mockResolvedValue(groups);
+    it('should retrieve groups for a user', async () => {
+      const mockGroups = [{ id: 1, name: 'Group 1' }];
+      getGroupsService.mockResolvedValue(mockGroups);
 
-      await getGroups(req, res);
+      req.query = { page: 1, limit: 10 };
+      await getGroups(req, res, next);
 
-      expect(getGroupsService).toHaveBeenCalledWith('user123', 1, 10);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(groups);
+      expect(getGroupsService).toHaveBeenCalledWith(req.user.id, 1, 10);
+      expect(res.data).toEqual(mockGroups);
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors when retrieving groups', async () => {
-      const error = new Error('Database error');
-      getGroupsService.mockRejectedValue(error);
+    it('should handle errors during group retrieval', async () => {
+      getGroupsService.mockRejectedValue(new Error('Error retrieving groups'));
 
-      await getGroups(req, res);
+      await getGroups(req, res, next);
 
       expect(res.json).toHaveBeenCalledWith({
         message: 'Error retrieving groups',
@@ -103,181 +102,204 @@ describe('Group Controller', () => {
   });
 
   describe('updateGroup', () => {
-    it('should update the group successfully', async () => {
-      req.params.groupId = 'group123';
+    it('should update a group successfully', async () => {
+      const mockUpdatedGroup = { id: 1, name: 'Updated Group' };
+      updateGroupService.mockResolvedValue(mockUpdatedGroup);
+
+      req.params.id = 1;
       req.body = { name: 'Updated Group' };
+      await updateGroup(req, res, next);
 
-      // Simulate that req.url contains the file URL
-      req.url = 'https://some.url.com/image.jpg';
-
-      // Mocking the S3 file upload
-      uploadFileToS3.mockResolvedValue(
-        'https://s3.amazonaws.com/groupimage.jpg',
-      );
-      updateGroupService.mockResolvedValue({
-        id: 'group123',
-        name: 'Updated Group',
-        profile_image_url: 'https://s3.amazonaws.com/groupimage.jpg',
-      });
-
-      await updateGroup(req, res);
-
-      // Assert that the uploadFileToS3 was called with the URL
-      expect(uploadFileToS3).toHaveBeenCalledWith(req.url);
-      expect(updateGroupService).toHaveBeenCalledWith(
-        'user123',
-        'group123',
-        req.body,
-      );
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        message: 'Group updated successfully',
-        group: {
-          id: 'group123',
-          name: 'Updated Group',
-          profile_image_url: 'https://s3.amazonaws.com/groupimage.jpg',
-        },
-      });
+      expect(updateGroupService).toHaveBeenCalledWith(req.user.id, 1, req.body);
+      expect(res.data).toEqual(mockUpdatedGroup);
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors when updating a group', async () => {
-      const error = new Error('Database error');
-      updateGroupService.mockRejectedValue(error);
+    it('should handle errors during group update', async () => {
+      updateGroupService.mockRejectedValue(new Error('Error updating group'));
 
-      await updateGroup(req, res);
+      await updateGroup(req, res, next);
 
-      // Expecting the error message returned by the service
-      expect(res.json).toHaveBeenCalledWith({ message: 'Database error' });
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Error updating group',
+      });
     });
   });
 
   describe('deleteGroup', () => {
-    it('should delete the group successfully', async () => {
-      req.params.groupId = 'group123';
-      deleteGroupService.mockResolvedValue();
+    it('should delete a group successfully', async () => {
+      deleteGroupService.mockResolvedValue('Group deleted successfully');
 
-      await deleteGroup(req, res);
+      req.params.id = 1;
+      await deleteGroup(req, res, next);
 
-      expect(deleteGroupService).toHaveBeenCalledWith('user123', 'group123');
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        message: 'Group deleted successfully',
-      });
+      expect(deleteGroupService).toHaveBeenCalledWith(req.user.id, 1);
+      expect(res.data).toEqual('Group deleted successfully');
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors when deleting a group', async () => {
-      const error = new Error('Database error');
-      deleteGroupService.mockRejectedValue(error);
+    it('should handle errors during group deletion', async () => {
+      deleteGroupService.mockRejectedValue(new Error('Error deleting group'));
 
-      await deleteGroup(req, res);
+      await deleteGroup(req, res, next);
 
-      expect(res.json).toHaveBeenCalledWith({ message: 'Database error' });
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Error deleting group',
+      });
     });
   });
 
   describe('addMemberToGroup', () => {
-    it('should add a user to the group successfully', async () => {
-      req.params.groupId = 'group123';
-      req.body = { userId: 'user456', isAdmin: false };
-      addGroupMember.mockResolvedValue({ success: true });
+    it('should add a member to a group successfully', async () => {
+      const mockResponse = { id: 1, username: 'new_member', isAdmin: false };
+      addGroupMember.mockResolvedValue(mockResponse);
 
-      await addMemberToGroup(req, res);
+      req.params.id = 1;
+      req.body = { username: 'new_member', isAdmin: false };
+      await addMemberToGroup(req, res, next);
 
       expect(addGroupMember).toHaveBeenCalledWith(
-        'group123',
-        'user123',
-        'user456',
+        1,
+        req.user.id,
+        'new_member',
         false,
       );
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        message: 'User added to group successfully',
-        data: { success: true },
-      });
+      expect(res.data).toEqual(mockResponse);
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors when adding a user to a group', async () => {
-      const error = new Error('Database error');
-      addGroupMember.mockRejectedValue(error);
+    it('should handle errors during adding a member to group', async () => {
+      addGroupMember.mockRejectedValue(new Error('Error adding user to group'));
 
-      await addMemberToGroup(req, res);
+      await addMemberToGroup(req, res, next);
 
-      expect(res.json).toHaveBeenCalledWith({ message: 'Database error' });
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Error adding user to group',
+      });
+    });
+  });
+
+  describe('getGroupMembers', () => {
+    it('should retrieve group members successfully', async () => {
+      const mockMembers = [{ id: 1, username: 'member1' }];
+      fetchGroupMembers.mockResolvedValue(mockMembers);
+
+      req.params.id = 1;
+      req.query = { page: 1, limit: 10 };
+      await getGroupMembers(req, res, next);
+
+      expect(fetchGroupMembers).toHaveBeenCalledWith(1, req.user.id, 1, 10);
+      expect(res.data).toEqual(mockMembers);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should handle errors during retrieving group members', async () => {
+      fetchGroupMembers.mockRejectedValue(new Error('Error getting members'));
+
+      await getGroupMembers(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Error getting members',
+      });
     });
   });
 
   describe('leaveGroup', () => {
-    it('should let a user leave the group', async () => {
-      req.params.groupId = 'group123';
-      leaveGroupService.mockResolvedValue();
+    it('should allow a user to leave a group', async () => {
+      leaveGroupService.mockResolvedValue('Left group successfully');
 
-      await leaveGroup(req, res);
+      req.params.id = 1;
+      await leaveGroup(req, res, next);
 
-      expect(leaveGroupService).toHaveBeenCalledWith('user123', 'group123');
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        message: 'You have left the group',
-      });
+      expect(leaveGroupService).toHaveBeenCalledWith(req.user.id, 1);
+      expect(res.data).toEqual('Left group successfully');
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors when leaving a group', async () => {
-      const error = new Error('Database error');
-      leaveGroupService.mockRejectedValue(error);
+    it('should handle errors during leaving group', async () => {
+      leaveGroupService.mockRejectedValue(new Error('Error leaving group'));
 
-      await leaveGroup(req, res);
+      await leaveGroup(req, res, next);
 
-      expect(res.json).toHaveBeenCalledWith({ message: 'Database error' });
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Error leaving group',
+      });
     });
   });
 
   describe('removeUser', () => {
-    it('should remove a user from the group successfully', async () => {
-      req.params.groupId = 'group123';
-      req.params.userId = 'user456';
-      removeUserService.mockResolvedValue();
+    it('should remove a user from a group successfully', async () => {
+      removeUserService.mockResolvedValue('User removed successfully');
 
-      await removeUser(req, res);
+      req.params = { id: 1, userId: 2 };
+      await removeUser(req, res, next);
 
-      expect(removeUserService).toHaveBeenCalledWith(
-        'user123',
-        'group123',
-        'user456',
-      );
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        message: 'User removed from the group',
-      });
+      expect(removeUserService).toHaveBeenCalledWith(1, 1, 2);
+      expect(res.data).toEqual('User removed successfully');
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors when removing a user from a group', async () => {
-      const error = new Error('Database error');
-      removeUserService.mockRejectedValue(error);
+    it('should handle errors during user removal', async () => {
+      removeUserService.mockRejectedValue(
+        new Error('Error removing user from group'),
+      );
 
-      await removeUser(req, res);
+      await removeUser(req, res, next);
 
-      expect(res.json).toHaveBeenCalledWith({ message: 'Database error' });
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Error removing user from group',
+      });
     });
   });
 
   describe('getAllPaymentsForGroup', () => {
-    it('should get all payments for the group', async () => {
-      req.params.groupId = 'group123';
-      const payments = [{ amount: 100, userId: 'user123' }];
-      getAllPaymentsInGroupService.mockResolvedValue(payments);
+    it('should get all payments in a group', async () => {
+      const mockPayments = [{ id: 1, amount: 100 }];
+      getAllPaymentsInGroupService.mockResolvedValue(mockPayments);
 
-      await getAllPaymentsForGroup(req, res);
+      req.params.groupId = 1;
+      await getAllPaymentsForGroup(req, res, next);
 
-      expect(getAllPaymentsInGroupService).toHaveBeenCalledWith('group123');
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(payments);
+      expect(getAllPaymentsInGroupService).toHaveBeenCalledWith(1);
+      expect(res.data).toEqual(mockPayments);
+      expect(next).toHaveBeenCalled();
     });
-    it('should handle errors when getting payments', async () => {
-      const error = new Error('Database error');
-      getAllPaymentsInGroupService.mockRejectedValue(error);
 
-      await getAllPaymentsForGroup(req, res);
+    it('should handle errors during getting payments', async () => {
+      getAllPaymentsInGroupService.mockRejectedValue(
+        new Error('Error getting payments'),
+      );
 
-      expect(res.json).toHaveBeenCalledWith({ message: 'Database error' });
+      await getAllPaymentsForGroup(req, res, next);
+
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Error getting payments',
+      });
+    });
+  });
+
+  describe('sendGroupInvite', () => {
+    it('should send a group invite successfully', async () => {
+      sendInviteEmail.mockResolvedValue('Invite sent successfully');
+
+      req.params.id = 1;
+      req.body.email = 'test@example.com';
+      await sendGroupInvite(req, res);
+
+      expect(sendInviteEmail).toHaveBeenCalledWith(1, 'test@example.com', 1);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Invite sent successfully',
+      });
+    });
+
+    it('should handle errors during sending group invite', async () => {
+      sendInviteEmail.mockRejectedValue(new Error('Error sending invite'));
+
+      await sendGroupInvite(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({ error: 'Error sending invite' });
     });
   });
 });

@@ -55,7 +55,7 @@ describe('Auth Controller Unit Tests', () => {
       { EX: 1800 },
     );
     expect(res.json).toHaveBeenCalledWith({
-      message: 'redirect to request-otp',
+      message: 'OTP sent to your email for registration',
     });
   });
 
