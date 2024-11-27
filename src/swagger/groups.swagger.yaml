@@ -38,11 +38,7 @@ paths:
                   type: string
                   description: Type of the group (e.g., Friends, Family, Travel)
                   example: Friends
-                profile_image_url:
-                  type: string
-                  description: Profile image URL for the group
-                  example: 'https://example.com/group-profile.png'
-                otherUsername:
+                username:
                   type: string
                   description: >
                     The username of the second user for a two-user group. 
@@ -136,7 +132,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
@@ -148,23 +144,28 @@ paths:
                   type: string
                   description: Type of the group
                   example: work
-                profile_image_url:
+                profile_image:
                   type: string
-                  description: New profile image URL
-                  example: 'https://example.com/updated-profile.png'
+                  format: binary
+                  description: Profile image file to upload
       responses:
         200:
           description: Group updated successfully
           content:
             application/json:
               schema:
-
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Group updated successfully
         403:
           description: Not authorized
         404:
           description: Group not found
         500:
           description: Internal server error
+
     delete:
       tags:
         - Groups
