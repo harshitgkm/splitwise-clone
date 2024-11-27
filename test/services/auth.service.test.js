@@ -170,9 +170,7 @@ describe('Auth Service', () => {
     it('should throw error if token is invalid', async () => {
       jwt.decode.mockReturnValue(null);
 
-      await expect(logoutUser(token)).rejects.toThrow(
-        'Token invalid or expired',
-      );
+      await expect(logoutUser(token)).rejects.toThrow('Failed to decode token');
     });
 
     it('should throw error if token is already expired', async () => {
@@ -180,7 +178,7 @@ describe('Auth Service', () => {
       jwt.decode.mockReturnValue(decodedToken);
 
       await expect(logoutUser(token)).rejects.toThrow(
-        'Token invalid or expired',
+        'Token is already expired',
       );
     });
   });
