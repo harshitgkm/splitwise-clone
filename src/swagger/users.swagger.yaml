@@ -43,12 +43,22 @@ paths:
         401:
           description: Unauthorized. Token is missing or invalid.
 
+  /users/{id}:
     put:
       tags:
         - Users
       summary: Update user profile
-      description: Updates the user profile. The user ID is extracted from the JWT token.
+      description: Updates the user profile of a specific user by ID. Requires authentication and allows updating fields such as `username` and uploading a new profile image.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the user whose profile is being updated.
       requestBody:
+        required: true
         content:
           multipart/form-data:
             schema:
@@ -60,6 +70,7 @@ paths:
                 profile_image:
                   type: string
                   format: binary
+                  description: Upload the user's profile image.
       security:
         - bearerAuth: []
       responses:
@@ -84,11 +95,13 @@ paths:
                         example: 'new_username'
                       profile_image:
                         type: string
-                        example: '/path/to/profile/image.jpg'
+                        example: 'https://example.com/path/to/profile/image.jpg'
         '400':
-          description: Bad Request
+          description: Bad Request – Invalid or missing parameters
         '401':
           description: Unauthorized – Invalid or missing token
+        '404':
+          description: Not Found – User not found
         '500':
           description: Internal Server Error
 
@@ -156,7 +169,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Friend'
+
   /users/friends/{id}:
     delete:
       tags:
@@ -186,7 +199,7 @@ paths:
         '400':
           description: Bad request. Invalid or missing data.
 
-  /users/payments:
+  /users/payment-report:
     get:
       tags:
         - Users
@@ -212,9 +225,8 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Payment'
 
-  /users/generate-report:
+  /users/expense-report:
     get:
       tags:
         - Users
@@ -227,7 +239,6 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExpenseReport'
 
   /users/report-pdf:
     post:
@@ -274,7 +285,6 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Report'
 
 components:
   securitySchemes:
