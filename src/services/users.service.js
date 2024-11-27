@@ -245,7 +245,7 @@ const generateExpenseReportService = async (userId, page = 1, limit = 10) => {
 const generatePDFAndUploadToS3 = async userId => {
   try {
     const reportData = await generateExpenseReportService(userId);
-    console.log('Report Data:', reportData);
+    const paymentData = await getAllPaymentsService(userId);
 
     const fs = require('fs');
     const path = require('path');
@@ -262,43 +262,78 @@ const generatePDFAndUploadToS3 = async userId => {
     pdfDoc.pipe(passThroughStream);
     pdfDoc.pipe(writeStream);
 
-    pdfDoc.fontSize(18).text('Expense Report', { align: 'center' });
+    pdfDoc
+      .fontSize(18)
+      .text(' Payment and Expense Report', { align: 'center' });
     pdfDoc.moveDown();
 
-    pdfDoc.fontSize(12).text(`Total Paid: ${reportData.totalPaid}`);
-    pdfDoc.text(`Total Owed: ${reportData.totalOwed}`);
+    const totalPaid = paymentData.totalPaidResult?.totalPaid || 0;
+    const totalOwed = paymentData.totalOwedResult?.totalOwed || 0;
+
+    pdfDoc.fontSize(14).text('Summary', { underline: true });
+    pdfDoc.fontSize(12).text(`Total Paid: ${totalPaid}`);
+    pdfDoc.text(`Total Owed: ${totalOwed}`);
     pdfDoc.moveDown();
 
-    if (reportData.paymentRecords.length > 0) {
-      pdfDoc.fontSize(14).text('Payment Records:', { underline: true });
-      pdfDoc.moveDown();
-      reportData.paymentRecords.forEach((record, index) => {
+    pdfDoc.fontSize(14).text('Payment Records:', { underline: true });
+    pdfDoc.moveDown();
+
+    if (paymentData.payments.length === 0) {
+      pdfDoc.fontSize(12).text('No payments found for this user.');
+    } else {
+      paymentData.payments.forEach((payment, index) => {
+        const payerId = payment.payer_id || 'Unknown';
+        const payeeId = payment.payee_id || 'Unknown';
+        const amount = payment.amount || 'N/A';
+        const createdAt = payment.created_at
+          ? new Date(payment.created_at).toLocaleDateString()
+          : 'Unknown Date';
+
         pdfDoc
           .fontSize(12)
           .text(
-            `${index + 1}. Paid: ${record.amountPaid}, Owed: ${record.amountOwed}, Description: ${record.expenseDescription}, Group: ${record.groupName}, Date: ${new Date(record.createdAt).toLocaleDateString()}`,
+            `${index + 1}. Payer ID: ${payerId}, Payee ID: ${payeeId}, Amount: ${amount}, Date: ${createdAt}`,
           );
       });
-      pdfDoc.moveDown();
     }
 
-    if (reportData.userExpenses.length > 0) {
-      pdfDoc.fontSize(14).text('User Expenses:', { underline: true });
-      pdfDoc.moveDown();
-      reportData.userExpenses.forEach((expense, index) => {
+    pdfDoc.moveDown();
+
+    pdfDoc.fontSize(14).text('Expense Records:', { underline: true });
+    pdfDoc.moveDown();
+
+    if (reportData.userExpenses.data.length === 0) {
+      pdfDoc.fontSize(12).text('No expenses found for this user.');
+    } else {
+      reportData.userExpenses.data.forEach((expense, index) => {
+        const groupName = expense.Group?.name || 'No Group';
+        const description = expense.description || 'No Description';
+        const amount = expense.amount || 0;
+        const createdAt = expense.created_at
+          ? new Date(expense.created_at).toLocaleDateString()
+          : 'Unknown Date';
+
         pdfDoc
           .fontSize(12)
           .text(
-            `${index + 1}. Description: ${expense.description}, Amount: ${expense.amount}, Group: ${expense.groupName}, Date: ${new Date(expense.createdAt).toLocaleDateString()}`,
+            `${index + 1}. Description: ${description}, Amount: ${amount}, Group: ${groupName}, Date: ${createdAt}`,
           );
-        if (expense.splits.length > 0) {
+
+        if (expense.expenseSplits?.length > 0) {
           pdfDoc.text('Splits:');
-          expense.splits.forEach(split => {
+          expense.expenseSplits.forEach((split, splitIndex) => {
+            const splitPaid = split.amount_paid || 0;
+            const splitOwed = split.amount_owed || 0;
+            const splitRatio = split.split_ratio || 'N/A';
+
             pdfDoc.text(
-              `  - Paid: ${split.amountPaid}, Owed: ${split.amountOwed}, Ratio: ${split.splitRatio}`,
+              `  - Split ${splitIndex + 1}: Paid: ${splitPaid}, Owed: ${splitOwed}, Ratio: ${splitRatio}`,
             );
           });
+        } else {
+          pdfDoc.text('  No splits available for this expense.');
         }
+
         pdfDoc.moveDown();
       });
     }
