@@ -21,7 +21,7 @@ describe('Mail Helper', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    jest.clearAllMocks(); // Clear mocks before each test
+    jest.clearAllMocks();
     process.env.EMAIL_USER = 'testuser@gmail.com';
     process.env.EMAIL_PASSWORD = 'password';
     process.env.MAIL_HOST = 'smtp.gmail.com';
@@ -29,7 +29,6 @@ describe('Mail Helper', () => {
   });
 
   afterEach(() => {
-    // Restore original environment variables
     process.env = originalEnv;
   });
 
