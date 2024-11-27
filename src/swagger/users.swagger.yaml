@@ -43,21 +43,12 @@ paths:
         401:
           description: Unauthorized. Token is missing or invalid.
 
-  /users/me/{id}:
     put:
       tags:
         - Users
       summary: Update user profile
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-          description: ID of the user to update
+      description: Updates the user profile. The user ID is extracted from the JWT token.
       requestBody:
-        required: true
         content:
           multipart/form-data:
             schema:
@@ -77,6 +68,29 @@ paths:
           content:
             application/json:
               schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'User profile updated successfully'
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      username:
+                        type: string
+                        example: 'new_username'
+                      profile_image:
+                        type: string
+                        example: '/path/to/profile/image.jpg'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized – Invalid or missing token
+        '500':
+          description: Internal Server Error
 
   /users/outstanding-balance:
     get:
@@ -216,7 +230,7 @@ paths:
                 $ref: '#/components/schemas/ExpenseReport'
 
   /users/report-pdf:
-    get:
+    post:
       tags:
         - Users
       summary: Generate and upload an expense report PDF

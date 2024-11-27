@@ -42,7 +42,9 @@ const updateGroupSerializer = (req, res) => {
     };
   }
 
-  res.status(200).json({ group: resultData });
+  res
+    .status(200)
+    .json({ message: 'Group updated successfully', data: resultData });
 };
 
 const deleteGroupSerializer = (req, res) => {

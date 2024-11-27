@@ -43,21 +43,23 @@ const addFriendSerializer = (req, res) => {
 };
 
 const getFriendsListSerializer = (req, res) => {
-  let receivedData = res.data || [];
-  let resultData = {};
-  if (receivedData) {
-    resultData = {
-      friends: receivedData,
-    };
-  }
+  const receivedData = res.data || {};
+  const resultData = {
+    friends: receivedData.data || [],
+    pagination: {
+      currentPage: receivedData.currentPage || 1,
+      totalFriends: receivedData.totalFriends || 0,
+    },
+  };
 
-  res.json(resultData);
+  res.status(200).json(resultData);
 };
 
 const getAllPaymentsSerializer = (req, res) => {
-  const receivedData = res.data || [];
-  console.log(receivedData);
-  const resultData = receivedData.map(payment => ({
+  const receivedData = res.data || {};
+  const { payments = [], pagination = {} } = receivedData;
+
+  const resultData = payments.map(payment => ({
     id: payment.id,
     groupId: payment.group_id,
     payerId: payment.payer_id,
@@ -66,7 +68,15 @@ const getAllPaymentsSerializer = (req, res) => {
     status: payment.status,
   }));
 
-  res.json(resultData);
+  res.json({
+    data: resultData,
+    pagination: {
+      totalItems: pagination.totalItems || 0,
+      currentPage: pagination.currentPage || 1,
+      totalPages: pagination.totalPages || 0,
+      itemsPerPage: pagination.itemsPerPage || 10,
+    },
+  });
 };
 
 const generateExpenseReportSerializer = (req, res) => {
@@ -77,28 +87,34 @@ const generateExpenseReportSerializer = (req, res) => {
     resultData = {
       totalPaid: receivedData.totalPaid || 0,
       totalOwed: receivedData.totalOwed || 0,
-      paymentRecords:
-        receivedData.paymentRecords?.map(payment => ({
-          amountPaid: payment.amountPaid || 0,
-          amountOwed: payment.amountOwed || 0,
-          expenseDescription: payment.expenseDescription || 'Unknown',
-          groupName: payment.groupName || 'No Group',
-          createdAt: payment.createdAt || null,
-        })) || [],
-      userExpenses:
-        receivedData.userExpenses?.map(expense => ({
-          id: expense.id || '',
-          description: expense.description || '',
-          amount: expense.amount || 0,
-          createdAt: expense.createdAt || null,
-          groupName: expense.groupName || 'No Group',
-          splits:
-            expense.splits?.map(split => ({
-              amountPaid: split.amountPaid || 0,
-              amountOwed: split.amountOwed || 0,
-              splitRatio: split.splitRatio || 0,
-            })) || [],
-        })) || [],
+      paymentRecords: {
+        data:
+          receivedData.paymentRecords?.data.map(payment => ({
+            amountPaid: payment.amount_paid || 0,
+            amountOwed: payment.amount_owed || 0,
+            expenseDescription: payment.Expense?.description || 'Unknown',
+            groupName: payment.Expense?.Group?.name || 'No Group',
+            createdAt: payment.created_at || null,
+          })) || [],
+        pagination: receivedData.paymentRecords?.pagination || {},
+      },
+      userExpenses: {
+        data:
+          receivedData.userExpenses?.data.map(expense => ({
+            id: expense.id || '',
+            description: expense.description || '',
+            amount: expense.amount || 0,
+            createdAt: expense.created_at || null,
+            groupName: expense.Group?.name || 'No Group',
+            splits:
+              expense.expenseSplits?.map(split => ({
+                amountPaid: split.amount_paid || 0,
+                amountOwed: split.amount_owed || 0,
+                splitRatio: split.split_ratio || 0,
+              })) || [],
+          })) || [],
+        pagination: receivedData.userExpenses?.pagination || {},
+      },
     };
   }
 

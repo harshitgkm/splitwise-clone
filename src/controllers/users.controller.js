@@ -37,7 +37,7 @@ const updateUserProfile = async (req, res, next) => {
     }
 
     console.log(req.file);
-    const updatedUser = await updateUser(req.params.id, updatedData);
+    const updatedUser = await updateUser(req.user.id, updatedData);
     res.data = updatedUser;
     next();
   } catch (error) {
@@ -76,11 +76,17 @@ const addFriend = async (req, res, next) => {
 
 const getFriendsList = async (req, res, next) => {
   const userId = req.user.id;
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
 
   try {
     const friendsList = await getFriends(userId, page, limit);
-    res.data = friendsList;
+    const response = {
+      currentPage: parseInt(page),
+      totalFriends: friendsList.length,
+      data: friendsList,
+    };
+
+    res.data = response;
     next();
   } catch (err) {
     console.error(err);
@@ -105,8 +111,13 @@ const getAllPaymentsForUser = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
-    const payments = await getAllPaymentsService(userId, page, limit);
-    res.data = payments;
+    const { payments, pagination } = await getAllPaymentsService(
+      userId,
+      parseInt(page, 10),
+      parseInt(limit, 10),
+    );
+
+    res.data = { payments, pagination };
     next();
   } catch (err) {
     res.json({ error: err.message });
@@ -116,7 +127,13 @@ const getAllPaymentsForUser = async (req, res, next) => {
 const generateExpenseReport = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const reportData = await generateExpenseReportService(userId);
+    const { page = 1, limit = 10 } = req.query;
+
+    const reportData = await generateExpenseReportService(
+      userId,
+      parseInt(page, 10),
+      parseInt(limit, 10),
+    );
     res.data = reportData;
     next();
   } catch (error) {

@@ -7,7 +7,13 @@ const generateTwoUserIdentifier = (userId1, userId2) => {
 };
 
 const createGroupService = async groupData => {
-  const { name, type, username: otherUsername, userId } = groupData;
+  const {
+    name,
+    type,
+    username: otherUsername,
+    userId,
+    my_username,
+  } = groupData;
 
   // if otherUsername is provided, handle two-user group logic
   if (otherUsername) {
@@ -31,7 +37,7 @@ const createGroupService = async groupData => {
 
     if (!group) {
       group = await Group.create({
-        name: otherUsername,
+        name: `${my_username}-${otherUsername}`,
         type: 'Two-User',
         two_user_identifier: twoUserIdentifier,
         created_by: userId,
@@ -152,7 +158,6 @@ const deleteGroupService = async (userId, groupId) => {
 
   return group;
 };
-
 const addGroupMember = async (
   groupId,
   currentUserId,
