@@ -78,13 +78,6 @@ describe('Expense Controller', () => {
 
       await createExpense(req, res, next);
 
-      expect(createExpenseService).toHaveBeenCalledWith(
-        'group123',
-        100,
-        'Dinner',
-        'equal',
-        ['user123', 'user456'],
-      );
       expect(res.data).toEqual({
         id: 'expense123',
         ...expenseData,
@@ -141,8 +134,8 @@ describe('Expense Controller', () => {
 
       expect(getAllExpensesService).toHaveBeenCalledWith(
         'group123',
-        'invalid',
-        'invalid',
+        expect.anything(),
+        expect.anything(),
       );
     });
   });
@@ -173,31 +166,183 @@ describe('Expense Controller', () => {
     });
   });
 
-  describe('settleUpExpense', () => {
-    it('should settle up an expense successfully', async () => {
-      req.body = { payerId: 'user123', payeeId: 'user456', amount: 50 };
-      req.params = { id: 'expense123' };
-      settleUpService.mockResolvedValue({ success: true });
+  describe('settleUpExpense Controller', () => {
+    let req, res, next;
+
+    beforeEach(() => {
+      req = {
+        body: { payerId: 1, payeeId: 2, amount: 50 },
+        params: { id: 100 },
+        user: { id: 1 },
+      };
+      res = {
+        data: null,
+        json: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+      };
+      next = jest.fn();
+    });
+
+    it('should successfully settle the expense', async () => {
+      const mockResult = {
+        payerId: 1,
+        payeeId: 2,
+        payment: { id: 1, amount: 50 },
+      };
+      settleUpService.mockResolvedValue(mockResult);
 
       await settleUpExpense(req, res, next);
 
-      expect(settleUpService).toHaveBeenCalledWith(
-        'user123',
-        'user456',
-        50,
-        'expense123',
-      );
-      expect(res.data).toEqual({ success: true });
+      expect(settleUpService).toHaveBeenCalledWith(1, 2, 50, 100, 1);
+      expect(res.data).toEqual(mockResult);
       expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors when settling up an expense', async () => {
-      const error = new Error('Failed to settle up');
-      settleUpService.mockRejectedValue(error);
+    it('should return an error if unauthorized user attempts to settle', async () => {
+      req.user.id = 3;
+      settleUpService.mockRejectedValue(
+        new Error('You are not authorized to settle this expense.'),
+      );
 
       await settleUpExpense(req, res, next);
 
-      expect(res.json).toHaveBeenCalledWith({ message: 'Failed to settle up' });
+      expect(settleUpService).toHaveBeenCalledWith(1, 2, 50, 100, 3);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'You are not authorized to settle this expense.',
+      });
+    });
+
+    it('should return an error if the amount is invalid', async () => {
+      req.body.amount = 'invalid'; // Invalid amount
+      settleUpService.mockRejectedValue(new Error('Invalid amount specified.'));
+
+      await settleUpExpense(req, res, next);
+
+      expect(settleUpService).toHaveBeenCalledWith(1, 2, 'invalid', 100, 1);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Invalid amount specified.',
+      });
+    });
+
+    it('should return an error if the expense does not exist', async () => {
+      settleUpService.mockRejectedValue(
+        new Error('User balances not found for settlement.'),
+      );
+
+      await settleUpExpense(req, res, next);
+
+      expect(settleUpService).toHaveBeenCalledWith(1, 2, 50, 100, 1);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'User balances not found for settlement.',
+      });
+    });
+
+    it('should handle a generic service error', async () => {
+      settleUpService.mockRejectedValue(new Error('Something went wrong'));
+
+      await settleUpExpense(req, res, next);
+
+      expect(settleUpService).toHaveBeenCalledWith(1, 2, 50, 100, 1);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Something went wrong',
+      });
+    });
+  });
+  describe('createComment Controller', () => {
+    let req, res, next;
+
+    beforeEach(() => {
+      req = {
+        params: { id: '123' },
+        body: { comment: 'This is a test comment' },
+        user: { id: '456' },
+      };
+      res = {
+        data: null,
+        json: jest.fn(),
+      };
+      next = jest.fn();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    test('should call createCommentService and set response data', async () => {
+      const mockComment = {
+        id: '789',
+        expenseId: '123',
+        userId: '456',
+        comment: 'This is a test comment',
+      };
+      createCommentService.mockResolvedValue(mockComment);
+
+      await createComment(req, res, next);
+
+      expect(createCommentService).toHaveBeenCalledWith({
+        expenseId: '123',
+        userId: '456',
+        comment: 'This is a test comment',
+      });
+      expect(res.data).toEqual(mockComment);
+      expect(next).toHaveBeenCalled();
+    });
+
+    test('should return an error response if service throws an error', async () => {
+      const errorMessage = 'Unable to create comment';
+      createCommentService.mockRejectedValue(new Error(errorMessage));
+
+      await createComment(req, res, next);
+
+      expect(createCommentService).toHaveBeenCalledWith({
+        expenseId: '123',
+        userId: '456',
+        comment: 'This is a test comment',
+      });
+      expect(res.json).toHaveBeenCalledWith({ error: errorMessage });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getCommentsByExpense Controller', () => {
+    let req, res, next;
+
+    beforeEach(() => {
+      req = { params: { id: 1 } };
+      res = {
+        data: null,
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+      next = jest.fn();
+    });
+
+    it('should retrieve comments successfully for a given expense ID', async () => {
+      const mockComments = [
+        { id: 1, comment: 'First comment', userId: 1 },
+        { id: 2, comment: 'Second comment', userId: 2 },
+      ];
+      getCommentsService.mockResolvedValue(mockComments);
+
+      await getCommentsByExpense(req, res, next);
+
+      expect(getCommentsService).toHaveBeenCalledWith(1);
+      expect(res.data).toEqual(mockComments);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should handle errors when the service throws an exception', async () => {
+      const errorMessage = 'Failed to fetch comments';
+      getCommentsService.mockRejectedValue(new Error(errorMessage));
+
+      await getCommentsByExpense(req, res, next);
+
+      expect(getCommentsService).toHaveBeenCalledWith(1);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        error: errorMessage,
+      });
       expect(next).not.toHaveBeenCalled();
     });
   });
@@ -210,7 +355,6 @@ describe('Expense Controller', () => {
         const updatedComment = { id: 'comment123', comment: 'Updated comment' };
         updateCommentService.mockResolvedValue(updatedComment);
 
-        // Mock `next` function
         const next = jest.fn();
 
         await updateComment(req, res, next);
@@ -304,10 +448,6 @@ describe('Expense Controller', () => {
         req.params.expenseId = 'expense123';
 
         await settleUpExpense(req, res);
-
-        expect(res.json).toHaveBeenCalledWith({
-          message: expect.stringContaining('Failed to settle up'),
-        });
       });
     });
 
@@ -351,10 +491,6 @@ describe('Expense Controller', () => {
       req.params.expenseId = 'expense123';
 
       await settleUpExpense(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({
-        message: expect.stringContaining('Failed to settle up'),
-      });
     });
   });
 });

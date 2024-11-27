@@ -64,53 +64,192 @@ describe('Expense Service Tests', () => {
   });
 
   describe('createExpenseService', () => {
-    it('should create an expense and split equally', async () => {
-      const groupId = 1;
-      const amount = 100;
-      const description = 'Dinner';
-      const splitType = 'EQUALLY';
-      const users = [{ userId: 1 }, { userId: 2 }];
+    let group, users;
 
-      Group.findByPk.mockResolvedValue({
-        id: groupId,
-        getUsers: jest.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
+    beforeEach(() => {
+      group = {
+        id: 1,
+        getUsers: jest.fn(),
+      };
+
+      users = [
+        { id: 1, email: 'user1@example.com' },
+        { id: 2, email: 'user2@example.com' },
+      ];
+
+      Group.findByPk.mockResolvedValue(group);
+      Expense.create.mockResolvedValue({
+        id: 101,
+        group_id: group.id,
+        description: 'Test expense',
+        amount: 100,
+        split_type: 'EQUALLY',
       });
 
-      Expense.create.mockResolvedValue({ id: 1 });
-      ExpenseSplit.create.mockResolvedValue({});
-      sendExpenseNotification.mockResolvedValue();
-
-      const result = await createExpenseService(
-        groupId,
-        amount,
-        description,
-        splitType,
-        users,
-      );
-
-      expect(result.id).toBe(1);
-      expect(Expense.create).toHaveBeenCalledWith({
-        group_id: groupId,
-        description: description,
-        amount,
-        split_type: splitType,
-      });
-      expect(ExpenseSplit.create).toHaveBeenCalledTimes(2);
-      expect(sendExpenseNotification).toHaveBeenCalledTimes(1);
+      sendExpenseNotification.mockResolvedValue(true);
     });
 
-    it('should throw an error if the group is not found', async () => {
-      const groupId = 1;
-      const amount = 100;
-      const description = 'Dinner';
-      const splitType = 'EQUALLY';
-      const users = [{ userId: 1 }, { userId: 2 }];
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
 
+    test('should throw error if group not found', async () => {
       Group.findByPk.mockResolvedValue(null);
 
       await expect(
-        createExpenseService(groupId, amount, description, splitType, users),
+        createExpenseService(1, 100, 'Test expense', 'EQUALLY', []),
       ).rejects.toThrow('Group not found');
+    });
+
+    test('should create an expense with EQUALLY split type', async () => {
+      group.getUsers.mockResolvedValue(users);
+      ExpenseSplit.create.mockResolvedValue(true);
+
+      const result = await createExpenseService(
+        1,
+        100,
+        'Test expense',
+        'EQUALLY',
+        [{ userId: 1 }],
+      );
+
+      expect(Expense.create).toHaveBeenCalledWith({
+        group_id: 1,
+        description: 'Test expense',
+        amount: 100,
+        split_type: 'EQUALLY',
+      });
+
+      expect(ExpenseSplit.create).toHaveBeenCalledTimes(2);
+      expect(sendExpenseNotification).toHaveBeenCalledWith(
+        ['user1@example.com', 'user2@example.com'],
+        expect.any(Object),
+        'Test expense',
+        100,
+      );
+
+      expect(result).toHaveProperty('id', 101);
+    });
+
+    test('should create an expense with PERCENTAGE split type', async () => {
+      group.getUsers.mockResolvedValue(users);
+      ExpenseSplit.create.mockResolvedValue(true);
+
+      const result = await createExpenseService(
+        1,
+        100,
+        'Test expense',
+        'PERCENTAGE',
+        [
+          { userId: 1, percentage: 50 },
+          { userId: 2, percentage: 50 },
+        ],
+      );
+
+      expect(Expense.create).toHaveBeenCalledWith({
+        group_id: 1,
+        description: 'Test expense',
+        amount: 100,
+        split_type: 'PERCENTAGE',
+      });
+
+      expect(ExpenseSplit.create).toHaveBeenCalledTimes(2);
+      expect(sendExpenseNotification).toHaveBeenCalledWith(
+        ['user1@example.com', 'user2@example.com'],
+        expect.any(Object),
+        'Test expense',
+        100,
+      );
+
+      expect(result).toHaveProperty('id', 101);
+    });
+
+    test('should throw error if negative percentage is provided in PERCENTAGE split type', async () => {
+      await expect(
+        createExpenseService(1, 100, 'Test expense', 'PERCENTAGE', [
+          { userId: 1, percentage: -50 },
+        ]),
+      ).rejects.toThrow('Percentage cannot be negative.');
+    });
+
+    test('should create an expense with SHARES split type', async () => {
+      group.getUsers.mockResolvedValue(users);
+      ExpenseSplit.create.mockResolvedValue(true);
+
+      const result = await createExpenseService(
+        1,
+        100,
+        'Test expense',
+        'SHARES',
+        [
+          { userId: 1, shares: 3 },
+          { userId: 2, shares: 2 },
+        ],
+      );
+
+      expect(Expense.create).toHaveBeenCalledWith({
+        group_id: 1,
+        description: 'Test expense',
+        amount: 100,
+        split_type: 'SHARES',
+      });
+
+      expect(ExpenseSplit.create).toHaveBeenCalledTimes(2);
+      expect(sendExpenseNotification).toHaveBeenCalledWith(
+        ['user1@example.com', 'user2@example.com'],
+        expect.any(Object),
+        'Test expense',
+        100,
+      );
+
+      expect(result).toHaveProperty('id', 101);
+    });
+
+    test('should create an expense with UNEQUAL split type', async () => {
+      group.getUsers.mockResolvedValue(users);
+      ExpenseSplit.create.mockResolvedValue(true);
+
+      const result = await createExpenseService(
+        1,
+        100,
+        'Test expense',
+        'UNEQUAL',
+        [
+          { userId: 1, amountPaid: 60 },
+          { userId: 2, amountPaid: 40 },
+        ],
+      );
+
+      expect(Expense.create).toHaveBeenCalledWith({
+        group_id: 1,
+        description: 'Test expense',
+        amount: 100,
+        split_type: 'UNEQUAL',
+      });
+
+      expect(ExpenseSplit.create).toHaveBeenCalledTimes(2);
+      expect(sendExpenseNotification).toHaveBeenCalledWith(
+        ['user1@example.com', 'user2@example.com'],
+        expect.any(Object),
+        'Test expense',
+        100,
+      );
+
+      expect(result).toHaveProperty('id', 101);
+    });
+
+    test('should throw error if amountPaid is negative in UNEQUAL split type', async () => {
+      await expect(
+        createExpenseService(1, 100, 'Test expense', 'UNEQUAL', [
+          { userId: 1, amountPaid: -10 },
+        ]),
+      ).rejects.toThrow('Amount paid cannot be negative.');
+    });
+
+    test('should throw error if invalid split type is provided', async () => {
+      await expect(
+        createExpenseService(1, 100, 'Test expense', 'INVALID', []),
+      ).rejects.toThrow('Invalid split type');
     });
   });
 
@@ -302,22 +441,86 @@ describe('Expense Service Tests', () => {
   });
 
   describe('updateCommentService', () => {
-    it('should throw an error if the comment is not found', async () => {
-      const commentId = 999;
-      const userId = 1;
-      const newCommentText = 'Updated comment';
-      Comment.findByPk.mockResolvedValue({
-        id: 1,
-        user_id: 1,
-        comment: 'Nice dinner',
-        User: { username: 'John' },
-      });
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
 
+    test('should throw an error if the comment is not found', async () => {
       Comment.findByPk.mockResolvedValue(null);
 
       await expect(
-        updateCommentService(commentId, userId, newCommentText),
+        updateCommentService(1, 'Updated comment text'),
       ).rejects.toThrow('Comment not found');
+
+      expect(Comment.findByPk).toHaveBeenCalledWith(1, {
+        include: [
+          {
+            model: User,
+            attributes: ['username', 'profile_picture_url'],
+          },
+        ],
+      });
+    });
+
+    test('should update the comment and return updated details', async () => {
+      const mockComment = {
+        id: 1,
+        expense_id: 101,
+        user_id: 202,
+        comment: 'Old comment',
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        User: {
+          username: 'Test User',
+          profile_picture_url: 'https://example.com/profile.jpg',
+        },
+        save: jest.fn().mockResolvedValue(),
+      };
+      Comment.findByPk.mockResolvedValue(mockComment);
+
+      const result = await updateCommentService(1, 'Updated comment text');
+
+      expect(Comment.findByPk).toHaveBeenCalledWith(1, {
+        include: [
+          {
+            model: User,
+            attributes: ['username', 'profile_picture_url'],
+          },
+        ],
+      });
+      expect(mockComment.comment).toBe('Updated comment text');
+      expect(mockComment.save).toHaveBeenCalled();
+
+      expect(result).toEqual({
+        id: 1,
+        expenseId: 101,
+        userId: 202,
+        comment: 'Updated comment text',
+        createdAt: mockComment.created_at,
+        updatedAt: mockComment.updated_at,
+        user: {
+          username: 'Test User',
+          profilePicture: 'https://example.com/profile.jpg',
+        },
+      });
+    });
+
+    test('should propagate errors from database operations', async () => {
+      const errorMessage = 'Database error';
+      Comment.findByPk.mockRejectedValue(new Error(errorMessage));
+
+      await expect(
+        updateCommentService(1, 'Updated comment text'),
+      ).rejects.toThrow(errorMessage);
+
+      expect(Comment.findByPk).toHaveBeenCalledWith(1, {
+        include: [
+          {
+            model: User,
+            attributes: ['username', 'profile_picture_url'],
+          },
+        ],
+      });
     });
   });
 
@@ -340,6 +543,181 @@ describe('Expense Service Tests', () => {
 
       await expect(deleteCommentService(commentId)).rejects.toThrow(
         'Comment not found',
+      );
+    });
+  });
+
+  describe('updateExpenseService', () => {
+    const mockExpense = {
+      id: 'expenseId',
+      group_id: 'groupId',
+      description: 'Dinner',
+      amount: 100,
+      split_type: 'EQUALLY',
+      save: jest.fn(),
+    };
+
+    const mockGroup = {
+      id: 'groupId',
+      getUsers: jest.fn(),
+    };
+
+    const mockUsers = [
+      { id: 'user1', username: 'Alice' },
+      { id: 'user2', username: 'Bob' },
+    ];
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should update an expense and split it equally', async () => {
+      Expense.findByPk.mockResolvedValue(mockExpense);
+      Group.findByPk.mockResolvedValue(mockGroup);
+      mockGroup.getUsers.mockResolvedValue(mockUsers);
+
+      const params = {
+        expenseId: 'expenseId',
+        description: 'New Description',
+        amount: 200,
+        split_type: 'EQUALLY',
+        users: [{ userId: 'user1' }, { userId: 'user2' }],
+      };
+
+      const result = await updateExpenseService(params);
+
+      expect(Expense.findByPk).toHaveBeenCalledWith('expenseId');
+      expect(mockExpense.save).toHaveBeenCalled();
+      expect(ExpenseSplit.destroy).toHaveBeenCalledWith({
+        where: { expense_id: 'expenseId' },
+      });
+      expect(ExpenseSplit.bulkCreate).toHaveBeenCalled();
+      expect(result).toEqual(mockExpense);
+    });
+
+    it('should update an expense and split it by percentage', async () => {
+      Expense.findByPk.mockResolvedValue(mockExpense);
+      Group.findByPk.mockResolvedValue(mockGroup);
+      mockGroup.getUsers.mockResolvedValue(mockUsers);
+
+      const params = {
+        expenseId: 'expenseId',
+        amount: 200,
+        split_type: 'PERCENTAGE',
+        users: [
+          { userId: 'user1', percentage: 70 },
+          { userId: 'user2', percentage: 30 },
+        ],
+      };
+
+      const result = await updateExpenseService(params);
+
+      expect(Expense.findByPk).toHaveBeenCalledWith('expenseId');
+      expect(mockExpense.save).toHaveBeenCalled();
+      expect(ExpenseSplit.destroy).toHaveBeenCalledWith({
+        where: { expense_id: 'expenseId' },
+      });
+      expect(ExpenseSplit.bulkCreate).toHaveBeenCalled();
+      expect(result).toEqual(mockExpense);
+    });
+
+    it('should update an expense and split it by shares', async () => {
+      Expense.findByPk.mockResolvedValue(mockExpense);
+      Group.findByPk.mockResolvedValue(mockGroup);
+      mockGroup.getUsers.mockResolvedValue(mockUsers);
+
+      const params = {
+        expenseId: 'expenseId',
+        amount: 300,
+        split_type: 'SHARES',
+        users: [
+          { userId: 'user1', shares: 3 },
+          { userId: 'user2', shares: 2 },
+        ],
+      };
+
+      const result = await updateExpenseService(params);
+
+      expect(Expense.findByPk).toHaveBeenCalledWith('expenseId');
+      expect(mockExpense.save).toHaveBeenCalled();
+      expect(ExpenseSplit.destroy).toHaveBeenCalledWith({
+        where: { expense_id: 'expenseId' },
+      });
+      expect(ExpenseSplit.bulkCreate).toHaveBeenCalled();
+      expect(result).toEqual(mockExpense);
+    });
+
+    it('should throw an error if the total percentage exceeds 100 in PERCENTAGE split type', async () => {
+      Expense.findByPk.mockResolvedValue(mockExpense);
+
+      const params = {
+        expenseId: 'expenseId',
+        amount: 300,
+        split_type: 'PERCENTAGE',
+        users: [
+          { userId: 'user1', percentage: 110 },
+          { userId: 'user2', percentage: 10 },
+        ],
+      };
+
+      await expect(updateExpenseService(params)).rejects.toThrowError(
+        'Percentage must be between 0 and 100.',
+      );
+    });
+
+    it('should throw an error if no expense is found', async () => {
+      Expense.findByPk.mockResolvedValue(null);
+
+      const params = {
+        expenseId: 'invalidExpenseId',
+      };
+
+      await expect(updateExpenseService(params)).rejects.toThrowError(
+        'Expense not found',
+      );
+    });
+
+    it('should throw an error if the total shares are less than or equal to zero in SHARES split type', async () => {
+      Expense.findByPk.mockResolvedValue(mockExpense);
+
+      const params = {
+        expenseId: 'expenseId',
+        amount: 300,
+        split_type: 'SHARES',
+        users: [
+          { userId: 'user1', shares: 0 },
+          { userId: 'user2', shares: 0 },
+        ],
+      };
+
+      await expect(updateExpenseService(params)).rejects.toThrowError(
+        'Total shares must be greater than zero.',
+      );
+    });
+
+    it('should throw an error if the group is not found', async () => {
+      Expense.findByPk.mockResolvedValue(mockExpense);
+      Group.findByPk.mockResolvedValue(null);
+
+      const params = {
+        expenseId: 'expenseId',
+        split_type: 'EQUALLY',
+      };
+
+      await expect(updateExpenseService(params)).rejects.toThrowError(
+        'Group not found',
+      );
+    });
+
+    it('should handle database errors and throw an error', async () => {
+      Expense.findByPk.mockRejectedValue(new Error('Database error'));
+
+      const params = {
+        expenseId: 'expenseId',
+      };
+
+      await expect(updateExpenseService(params)).rejects.toThrowError(
+        'Database error',
       );
     });
   });
