@@ -103,17 +103,21 @@ const deleteExpense = async (req, res) => {
 
 const settleUpExpense = async (req, res, next) => {
   const { payerId, payeeId, amount } = req.body;
-  console.log(payerId, payeeId, amount);
   const expenseId = req.params.id;
-  console.log(expenseId);
 
   try {
-    const result = await settleUpService(payerId, payeeId, amount, expenseId);
+    const result = await settleUpService(
+      payerId,
+      payeeId,
+      amount,
+      expenseId,
+      req.user.id,
+    );
     res.data = result;
     next();
   } catch (error) {
-    console.log(error);
-    res.json({ message: error.message });
+    console.error('Error in settleUpExpense:', error.message);
+    res.status(403).json({ message: error.message });
   }
 };
 
