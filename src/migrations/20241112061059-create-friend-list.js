@@ -9,7 +9,7 @@ module.exports = {
         allowNull: false,
         primaryKey: true,
       },
-      friend_one: {
+      user_id: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
@@ -17,7 +17,7 @@ module.exports = {
           key: 'id',
         },
       },
-      friend_two: {
+      friend_id: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {

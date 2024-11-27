@@ -12,12 +12,14 @@ const expenseSerializer = (req, res) => {
     };
   }
 
-  res.json(resultData);
+  res.json({ message: 'Expense created successfully', data: resultData });
 };
 
 const getAllExpensesSerializer = (req, res) => {
-  const receivedData = res.data || [];
-  const resultData = receivedData.map(expense => ({
+  const receivedData = res.data || {};
+  const { expenses = [], pagination = {} } = receivedData;
+
+  const serializedExpenses = expenses.map(expense => ({
     id: expense.id || '',
     description: expense.description || '',
     amount: expense.amount || 0,
@@ -25,7 +27,15 @@ const getAllExpensesSerializer = (req, res) => {
     expenseImage: expense.expense_image_url || '',
   }));
 
-  res.status(200).json(resultData);
+  res.status(200).json({
+    expenses: serializedExpenses,
+    pagination: {
+      total: pagination.total || 0,
+      page: pagination.page || 1,
+      limit: pagination.limit || 10,
+      totalPages: pagination.totalPages || 1,
+    },
+  });
 };
 
 const expenseDetailsSerializer = (req, res) => {
@@ -46,13 +56,6 @@ const expenseDetailsSerializer = (req, res) => {
             amountOwed: parseFloat(split.amount_owed) || 0,
             splitRatio: parseFloat(split.split_ratio) || 0,
             username: split.username || '',
-          }))
-        : [],
-      oweDetails: Array.isArray(receivedData.oweDetails)
-        ? receivedData.oweDetails.map(owe => ({
-            payer: owe.payer || '',
-            oweTo: owe.oweTo || '',
-            amount: parseFloat(owe.amount) || 0,
           }))
         : [],
     };
@@ -77,7 +80,11 @@ const updateExpenseSerializer = (req, res) => {
     };
   }
 
-  res.status(200).json(resultData);
+  res.status(200).json({
+    message: 'Expense updated successfully',
+    datakey: 'value',
+    resultData,
+  });
 };
 
 const settleUpSerializer = (req, res) => {
@@ -97,7 +104,9 @@ const settleUpSerializer = (req, res) => {
     };
   }
 
-  res.status(200).json(resultData);
+  res
+    .status(200)
+    .json({ message: 'Expense settled successfully', data: resultData });
 };
 
 const createCommentSerializer = (req, res) => {
@@ -117,7 +126,9 @@ const createCommentSerializer = (req, res) => {
     };
   }
 
-  res.status(201).json(resultData);
+  res
+    .status(201)
+    .json({ message: 'Comment added successfully', data: resultData });
 };
 
 const getCommentsSerializer = (req, res) => {
@@ -133,7 +144,7 @@ const getCommentsSerializer = (req, res) => {
     updatedAt: comment.updated_at,
   }));
 
-  res.status(200).json(resultData);
+  res.status(200).json({ data: resultData });
 };
 
 const updateCommentSerializer = (req, res) => {
@@ -153,7 +164,9 @@ const updateCommentSerializer = (req, res) => {
     };
   }
 
-  res.status(200).json(resultData);
+  res
+    .status(200)
+    .json({ message: 'Comment updated successfully', data: resultData });
 };
 
 module.exports = {

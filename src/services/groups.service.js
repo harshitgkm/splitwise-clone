@@ -15,7 +15,6 @@ const createGroupService = async groupData => {
     my_username,
   } = groupData;
 
-  // if otherUsername is provided, handle two-user group logic
   if (otherUsername) {
     const otherUser = await User.findOne({
       where: { username: otherUsername },
@@ -62,7 +61,6 @@ const createGroupService = async groupData => {
     return group;
   }
 
-  //handle multi-user groups
   const group = await Group.create({
     name,
     type,
@@ -79,55 +77,64 @@ const createGroupService = async groupData => {
   return group;
 };
 
-const getGroupsService = async (
-  userId,
-  page = 1,
-  limit = 10,
-  filter = 'owed',
-) => {
-  try {
-    const offset = (page - 1) * limit;
+const getGroupsService = async (userId, page = 1, limit = 10) => {
+  const offset = (page - 1) * limit;
 
-    const groupMembers = await GroupMember.findAll({
-      where: { user_id: userId },
-      limit: limit,
-      offset: offset,
-    });
+  const totalGroupsCount = await GroupMember.count({
+    where: { user_id: userId },
+  });
 
-    if (!groupMembers || groupMembers.length === 0) {
-      return [];
-    }
+  const groupMembers = await GroupMember.findAll({
+    where: { user_id: userId },
+    limit,
+    offset,
+  });
 
-    const groups = [];
-
-    for (let member of groupMembers) {
-      try {
-        const group = await Group.findByPk(member.group_id, {
-          attributes: ['id', 'name', 'type', 'profile_image_url'],
-        });
-
-        if (group) {
-          if (filter === 'all' || filter === 'owe' || filter === 'owed') {
-            groups.push({
-              groupId: group.id,
-              groupName: group.name,
-              groupType: group.type,
-              profileImageUrl: group.profile_image_url || null,
-            });
-          }
-        } else {
-          console.warn(`Group not found for group_member: ${member.group_id}`);
-        }
-      } catch (error) {
-        console.error(`Error fetching group for member ${member.id}:`, error);
-      }
-    }
-
-    return groups;
-  } catch (error) {
-    console.error('Error retrieving groups:', error);
-    throw new Error('Error retrieving groups');
+  if (!groupMembers || groupMembers.length === 0) {
+    return {
+      groups: [],
+      pagination: {
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      },
+    };
   }
+
+  const groups = await Promise.all(
+    groupMembers.map(async member => {
+      const group = await Group.findByPk(member.group_id, {
+        attributes: ['id', 'name', 'type', 'profile_image_url'],
+      });
+
+      if (group) {
+        return {
+          groupId: group.id,
+          groupName: group.name,
+          groupType: group.type,
+          profileImageUrl: group.profile_image_url || null,
+        };
+      }
+
+      console.warn(`Group not found for group_member: ${member.group_id}`);
+      return null;
+    }),
+  );
+
+  const filteredGroups = groups.filter(group => group !== null);
+
+  const totalPages = Math.max(1, Math.ceil(totalGroupsCount / limit));
+
+  return {
+    groups: filteredGroups,
+    pagination: {
+      total: totalGroupsCount,
+      page,
+      limit,
+      totalPages,
+    },
+  };
 };
 
 const updateGroupService = async (userId, groupId, groupData) => {
@@ -193,7 +200,14 @@ const addGroupMember = async (
   return newMember;
 };
 
-const fetchGroupMembers = async (groupId, currentUserId) => {
+const fetchGroupMembers = async (
+  groupId,
+  currentUserId,
+  page = 1,
+  limit = 10,
+) => {
+  const offset = (page - 1) * limit;
+
   const group = await Group.findByPk(groupId);
   if (!group) {
     throw new Error('Group not found');
@@ -206,6 +220,10 @@ const fetchGroupMembers = async (groupId, currentUserId) => {
     throw new Error('You do not have access to this group');
   }
 
+  const totalMembersCount = await GroupMember.count({
+    where: { group_id: groupId },
+  });
+
   const members = await GroupMember.findAll({
     where: { group_id: groupId },
     include: [
@@ -215,15 +233,29 @@ const fetchGroupMembers = async (groupId, currentUserId) => {
       },
     ],
     attributes: ['is_admin', 'joined_at'],
+    limit,
+    offset,
   });
 
-  return members.map(member => ({
+  const formattedMembers = members.map(member => ({
     username: member.User.username,
     email: member.User.email,
     profilePicture: member.User.profile_picture_url,
     isAdmin: member.is_admin,
     joinedAt: member.joined_at,
   }));
+
+  const totalPages = Math.ceil(totalMembersCount / limit);
+
+  return {
+    members: formattedMembers,
+    pagination: {
+      total: totalMembersCount,
+      page,
+      limit,
+      totalPages,
+    },
+  };
 };
 
 const leaveGroupService = async (userId, groupId) => {

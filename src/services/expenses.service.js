@@ -173,12 +173,27 @@ const createExpenseService = async (
 const getAllExpensesService = async (groupId, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
 
+  const totalExpensesCount = await Expense.count({
+    where: { group_id: groupId },
+  });
+
   const expenses = await Expense.findAll({
     where: { group_id: groupId },
     limit: limit,
     offset: offset,
   });
-  return expenses;
+
+  const totalPages = Math.ceil(totalExpensesCount / limit);
+
+  return {
+    expenses,
+    pagination: {
+      total: totalExpensesCount,
+      page,
+      limit,
+      totalPages,
+    },
+  };
 };
 
 const getExpenseDetailsService = async expenseId => {
@@ -254,6 +269,7 @@ const getExpenseDetailsService = async expenseId => {
     oweDetails,
   };
 };
+
 const updateExpenseService = async ({
   expenseId,
   description,
@@ -399,58 +415,53 @@ const deleteExpenseService = async expenseId => {
 };
 
 const settleUpService = async (payerId, payeeId, amount, expenseId) => {
-  try {
-    const payerExpense = await ExpenseSplit.findOne({
-      where: { user_id: payerId, expense_id: expenseId },
-    });
+  const payerExpense = await ExpenseSplit.findOne({
+    where: { user_id: payerId, expense_id: expenseId },
+  });
 
-    const payeeExpense = await ExpenseSplit.findOne({
-      where: { user_id: payeeId, expense_id: expenseId },
-    });
+  const payeeExpense = await ExpenseSplit.findOne({
+    where: { user_id: payeeId, expense_id: expenseId },
+  });
 
-    if (!payerExpense || !payeeExpense) {
-      throw new Error('User balances not found for settlement.');
-    }
-
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount)) {
-      throw new Error('Invalid amount specified.');
-    }
-
-    if (parseFloat(payerExpense.amount_owed) !== parsedAmount) {
-      throw new Error('The amount to settle must match the amount owed.');
-    }
-
-    let newPayerBalance = parseFloat(payerExpense.amount_owed) - parsedAmount;
-    let newPayeeBalance = parseFloat(payeeExpense.amount_owed) + parsedAmount;
-
-    await ExpenseSplit.update(
-      { amount_owed: newPayerBalance },
-      { where: { user_id: payerId, expense_id: expenseId } },
-    );
-
-    await ExpenseSplit.update(
-      { amount_owed: newPayeeBalance },
-      { where: { user_id: payeeId, expense_id: expenseId } },
-    );
-
-    const payment = await Payment.create({
-      payer_id: payerId,
-      payee_id: payeeId,
-      amount: parsedAmount,
-      status: 'Completed',
-      expense_id: expenseId,
-    });
-
-    return {
-      payerId,
-      payeeId,
-      payment,
-    };
-  } catch (error) {
-    console.error('Error in settleUpService:', error.message);
-    throw error;
+  if (!payerExpense || !payeeExpense) {
+    throw new Error('User balances not found for settlement.');
   }
+
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount)) {
+    throw new Error('Invalid amount specified.');
+  }
+
+  if (parseFloat(payerExpense.amount_owed) !== parsedAmount) {
+    throw new Error('The amount to settle must match the amount owed.');
+  }
+
+  let newPayerBalance = parseFloat(payerExpense.amount_owed) - parsedAmount;
+  let newPayeeBalance = parseFloat(payeeExpense.amount_owed) + parsedAmount;
+
+  await ExpenseSplit.update(
+    { amount_owed: newPayerBalance },
+    { where: { user_id: payerId, expense_id: expenseId } },
+  );
+
+  await ExpenseSplit.update(
+    { amount_owed: newPayeeBalance },
+    { where: { user_id: payeeId, expense_id: expenseId } },
+  );
+
+  const payment = await Payment.create({
+    payer_id: payerId,
+    payee_id: payeeId,
+    amount: parsedAmount,
+    status: 'Completed',
+    expense_id: expenseId,
+  });
+
+  return {
+    payerId,
+    payeeId,
+    payment,
+  };
 };
 
 const createCommentService = async ({ expenseId, userId, comment }) => {

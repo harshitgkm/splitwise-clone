@@ -31,9 +31,13 @@ const createGroup = async (req, res, next) => {
 const getGroups = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 20, filter = 'all' } = req.query;
+    const { page = 1, limit = 10 } = req.query;
 
-    const groups = await getGroupsService(userId, page, limit, filter);
+    const groups = await getGroupsService(
+      userId,
+      parseInt(page, 10),
+      parseInt(limit, 10),
+    );
     res.data = groups;
     next();
   } catch (error) {
@@ -99,14 +103,22 @@ const getGroupMembers = async (req, res, next) => {
   try {
     const { id: groupId } = req.params;
     const currentUserId = req.user.id;
+    const { page = 1, limit = 10 } = req.query;
 
-    const members = await fetchGroupMembers(groupId, currentUserId);
+    const membersData = await fetchGroupMembers(
+      groupId,
+      currentUserId,
+      page,
+      limit,
+    );
 
-    res.data = members;
+    res.data = membersData;
     next();
   } catch (error) {
     console.error(error);
-    res.json({ message: error.message || 'Error getting group memebers' });
+    res
+      .status(400)
+      .json({ message: error.message || 'Error getting group members' });
   }
 };
 
