@@ -52,10 +52,10 @@ const updateGroup = async (req, res, next) => {
     const id = req.params.id;
     const groupData = req.body;
 
-    if (req.url) {
-      console.log(req.url);
+    if (req.file) {
+      console.log(req.file);
 
-      const image = await uploadFileToS3(req.url);
+      const image = await uploadFileToS3(req.file);
       console.log(image);
       groupData.profile_image_url = image;
     }
