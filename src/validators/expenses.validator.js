@@ -2,6 +2,7 @@ const Joi = require('joi');
 
 const createExpenseValidator = (req, res, next) => {
   const schema = Joi.object({
+    groupId: Joi.string().uuid().required(),
     amount: Joi.number().precision(2).positive().required(),
     description: Joi.string().max(255).optional(),
     splitType: Joi.string()
