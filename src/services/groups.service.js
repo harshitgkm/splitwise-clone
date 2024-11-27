@@ -78,68 +78,63 @@ const createGroupService = async groupData => {
 };
 
 const getGroupsService = async (userId, page = 1, limit = 10) => {
-  try {
-    const offset = (page - 1) * limit;
+  const offset = (page - 1) * limit;
 
-    const totalGroupsCount = await GroupMember.count({
-      where: { user_id: userId },
-    });
+  const totalGroupsCount = await GroupMember.count({
+    where: { user_id: userId },
+  });
 
-    const groupMembers = await GroupMember.findAll({
-      where: { user_id: userId },
-      limit,
-      offset,
-    });
+  const groupMembers = await GroupMember.findAll({
+    where: { user_id: userId },
+    limit,
+    offset,
+  });
 
-    if (!groupMembers || groupMembers.length === 0) {
-      return {
-        groups: [],
-        pagination: {
-          total: 0,
-          page,
-          limit,
-          totalPages: 0,
-        },
-      };
-    }
-
-    const groups = await Promise.all(
-      groupMembers.map(async member => {
-        const group = await Group.findByPk(member.group_id, {
-          attributes: ['id', 'name', 'type', 'profile_image_url'],
-        });
-
-        if (group) {
-          return {
-            groupId: group.id,
-            groupName: group.name,
-            groupType: group.type,
-            profileImageUrl: group.profile_image_url || null,
-          };
-        }
-
-        console.warn(`Group not found for group_member: ${member.group_id}`);
-        return null;
-      }),
-    );
-
-    const filteredGroups = groups.filter(group => group !== null);
-
-    const totalPages = Math.max(1, Math.ceil(totalGroupsCount / limit));
-
+  if (!groupMembers || groupMembers.length === 0) {
     return {
-      groups: filteredGroups,
+      groups: [],
       pagination: {
-        total: totalGroupsCount,
+        total: 0,
         page,
         limit,
-        totalPages,
+        totalPages: 0,
       },
     };
-  } catch (error) {
-    console.error('Error retrieving groups:', error);
-    throw new Error('Error retrieving groups');
   }
+
+  const groups = await Promise.all(
+    groupMembers.map(async member => {
+      const group = await Group.findByPk(member.group_id, {
+        attributes: ['id', 'name', 'type', 'profile_image_url'],
+      });
+
+      if (group) {
+        return {
+          groupId: group.id,
+          groupName: group.name,
+          groupType: group.type,
+          profileImageUrl: group.profile_image_url || null,
+        };
+      }
+
+      console.warn(`Group not found for group_member: ${member.group_id}`);
+      return null;
+    }),
+  );
+
+  const filteredGroups = groups.filter(group => group !== null);
+
+  const totalPages = Math.max(1, Math.ceil(totalGroupsCount / limit));
+
+  return {
+    groups: filteredGroups,
+    pagination: {
+      total: totalGroupsCount,
+      page,
+      limit,
+      totalPages,
+    },
+  };
 };
 
 const updateGroupService = async (userId, groupId, groupData) => {

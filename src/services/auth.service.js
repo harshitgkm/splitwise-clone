@@ -36,29 +36,24 @@ const validateOtp = async (email, otp) => {
 };
 
 const logoutUser = async token => {
-  try {
-    const decoded = jwt.decode(token);
-    if (!decoded) {
-      throw new Error('Failed to decode token');
-    }
-
-    const expTime = decoded.exp - Math.floor(Date.now() / 1000);
-    console.log('Token expiration time in seconds:', expTime);
-
-    if (expTime <= 0) {
-      throw new Error('Token is already expired');
-    }
-
-    await redisClient.set(token, 'blacklisted', { EX: expTime });
-
-    return {
-      success: true,
-      message: 'Token blacklisted successfully, You are now logged out',
-    };
-  } catch (error) {
-    console.log(error);
-    throw new Error('Token invalid or expired');
+  const decoded = jwt.decode(token);
+  if (!decoded) {
+    throw new Error('Failed to decode token');
   }
+
+  const expTime = decoded.exp - Math.floor(Date.now() / 1000);
+  console.log('Token expiration time in seconds:', expTime);
+
+  if (expTime <= 0) {
+    throw new Error('Token is already expired');
+  }
+
+  await redisClient.set(token, 'blacklisted', { EX: expTime });
+
+  return {
+    success: true,
+    message: 'Token blacklisted successfully, You are now logged out',
+  };
 };
 
 module.exports = {
