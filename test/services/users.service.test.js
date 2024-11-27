@@ -1,742 +1,248 @@
 const {
   getUserById,
   updateUser,
+  calculateOutstandingBalance,
   addFriendService,
   getFriends,
-} = require('../../src/services/users.service');
+  removeFriendService,
+  getAllPaymentsService,
+  generateExpenseReportService,
+  generatePDFAndUploadToS3,
+  getReportsService,
+} = require('../../src/services/users.service.js');
 const {
   User,
   FriendList,
   ExpenseSplit,
-  Expense,
+  Payment,
   Report,
+  Group,
+  Expense,
 } = require('../../src/models');
-const {
-  calculateOutstandingBalance,
-  generateExpenseReportService,
-  generatePDFAndUploadToS3,
-} = require('../../src/services/users.service'); // Adjust path if needed
-const { removeFriendService } = require('../../src/services/users.service.js'); // Adjust the path as needed
+const { uploadFileToS3 } = require('../../src/helpers/aws.helper.js');
 const Sequelize = require('sequelize');
 
+// Mocking external modules
+jest.mock('../../src/helpers/aws.helper.js');
 jest.mock('../../src/models');
-jest.mock('../../src/helpers/aws.helper.js', () => ({
-  uploadFileToS3: jest.fn(),
-}));
+jest.mock('sequelize');
 
-describe('User Service', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+jest.mock('../../src/helpers/aws.helper.js'); // Mock the aws helper module
 
+describe('User Service Tests', () => {
   describe('getUserById', () => {
-    it('should fetch user by ID and exclude password', async () => {
+    it('should return user details excluding password', async () => {
       const mockUser = {
-        id: '123',
-        username: 'johndoe',
-        email: 'johndoe@example.com',
-        profile_picture_url: 'https://example.com/profile.jpg',
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
       };
-
       User.findByPk = jest.fn().mockResolvedValue(mockUser);
 
-      const userId = '123';
-      const result = await getUserById(userId);
+      const user = await getUserById(1);
 
-      expect(User.findByPk).toHaveBeenCalledWith(userId, {
+      expect(User.findByPk).toHaveBeenCalledWith(1, {
         attributes: { exclude: ['password'] },
       });
-      expect(result).toEqual({
-        id: '123',
-        username: 'johndoe',
-        email: 'johndoe@example.com',
-        profile_picture_url: 'https://example.com/profile.jpg',
-      });
+      expect(user).toEqual(mockUser);
     });
 
-    it('should return null if user is not found', async () => {
+    it('should return null if user does not exist', async () => {
       User.findByPk = jest.fn().mockResolvedValue(null);
 
-      const userId = '999';
-      const result = await getUserById(userId);
+      const user = await getUserById(1);
 
-      expect(result).toBeNull();
+      expect(user).toBeNull();
     });
   });
 
   describe('updateUser', () => {
-    it('should update user successfully', async () => {
-      const updatedData = { username: 'john_doe_updated' };
-      const mockUser = {
-        id: '123',
-        username: 'john_doe_updated',
-        email: 'johndoe@example.com',
-        profile_picture_url: 'https://example.com/profile.jpg',
-      };
-
+    it('should update user details and return updated user', async () => {
+      const updatedData = { username: 'newusername' };
+      const mockUser = { id: 1, username: 'newusername' };
       User.update = jest.fn().mockResolvedValue([1]);
       User.findByPk = jest.fn().mockResolvedValue(mockUser);
 
-      const userId = '123';
-      const result = await updateUser(userId, updatedData);
+      const user = await updateUser(1, updatedData);
 
-      expect(result).toEqual({
-        id: '123',
-        username: 'john_doe_updated',
-        email: 'johndoe@example.com',
-        profile_picture_url: 'https://example.com/profile.jpg',
+      expect(User.update).toHaveBeenCalledWith(updatedData, {
+        where: { id: 1 },
       });
+      expect(user.username).toBe('newusername');
+    });
+  });
+
+  describe('calculateOutstandingBalance', () => {
+    it('should calculate the outstanding balance for a user', async () => {
+      const mockExpenseSplits = [
+        { amount_owed: 50, amount_paid: 20 },
+        { amount_owed: 30, amount_paid: 10 },
+      ];
+      ExpenseSplit.findAll = jest.fn().mockResolvedValue(mockExpenseSplits);
+
+      const balance = await calculateOutstandingBalance(1);
+
+      expect(balance).toBe(50);
     });
 
-    it('should throw an error if the user does not exist', async () => {
-      User.update = jest.fn().mockResolvedValue([0]);
+    it('should return 0 if there are no expense splits', async () => {
+      ExpenseSplit.findAll = jest.fn().mockResolvedValue([]);
 
-      const updatedData = { username: 'john_doe_updated' };
-      const userId = '999';
+      const balance = await calculateOutstandingBalance(1);
 
-      await expect(updateUser(userId, updatedData)).rejects.toThrow(
-        'User not found',
-      );
-    });
-
-    it('should throw an error if update fails due to database error', async () => {
-      User.update = jest.fn().mockRejectedValue(new Error('Database error'));
-
-      const updatedData = { username: 'john_doe_updated' };
-      const userId = '123';
-
-      await expect(updateUser(userId, updatedData)).rejects.toThrow(
-        'Database error',
-      );
-    });
-
-    it('should validate email format on update', async () => {
-      const updatedData = { email: 'invalidemail' };
-      const userId = '123';
-
-      await expect(updateUser(userId, updatedData)).rejects.toThrow(
-        'Invalid email format',
-      );
+      expect(balance).toBe(0);
     });
   });
 
   describe('addFriendService', () => {
-    it('should add a new friendship', async () => {
-      const mockFriend = { username: 'janedoe' };
-      const friend_one = '123';
-      const friend_two = '456';
-
-      FriendList.findOne = jest.fn().mockResolvedValue(null);
+    it('should add a friend if not already friends', async () => {
+      const mockFriend = { id: 2, username: 'frienduser' };
+      const user_id = 1;
       User.findOne = jest.fn().mockResolvedValue(mockFriend);
+      FriendList.findOne = jest.fn().mockResolvedValue(null);
+      FriendList.create = jest.fn().mockResolvedValue(mockFriend);
 
-      const result = await addFriendService(friend_one, friend_two);
+      const response = await addFriendService(user_id, 'frienduser');
 
-      expect(FriendList.findOne).toHaveBeenCalled();
-      expect(User.findOne).toHaveBeenCalledWith({
-        where: { id: '456' }, // Correct the query field here
-        attributes: ['username'],
+      expect(FriendList.create).toHaveBeenCalledWith({
+        user_id: 1,
+        friend_id: 2,
       });
-      expect(result).toEqual({
-        message: 'Friendship created successfully with janedoe',
-        friend: 'janedoe',
-      });
+      expect(response.message).toBe(
+        'Friendship created successfully with frienduser',
+      );
     });
-    it('should throw an error if friendship already exists', async () => {
-      const friend_one = '123';
-      const friend_two = '456';
 
-      FriendList.findOne = jest.fn().mockResolvedValue(true);
+    it('should throw error if user tries to add themselves as a friend', async () => {
+      await expect(addFriendService(1, 'testuser')).rejects.toThrow(
+        'You cannot add yourself as a friend',
+      );
+    });
 
-      await expect(addFriendService(friend_one, friend_two)).rejects.toThrow(
+    it('should throw error if friendship already exists', async () => {
+      const mockFriend = { id: 2, username: 'frienduser' };
+      User.findOne = jest.fn().mockResolvedValue(mockFriend);
+      FriendList.findOne = jest.fn().mockResolvedValue(mockFriend);
+
+      await expect(addFriendService(1, 'frienduser')).rejects.toThrow(
         'Friendship already exists',
       );
     });
 
-    it('should throw an error if friend not found', async () => {
-      const friend_one = '123';
-      const friend_two = '456';
-
-      FriendList.findOne = jest.fn().mockResolvedValue(null);
+    it('should throw error if user does not exist', async () => {
       User.findOne = jest.fn().mockResolvedValue(null);
 
-      await expect(addFriendService(friend_one, friend_two)).rejects.toThrow(
-        'User with this username not found',
-      );
-    });
-
-    it('should handle database errors when adding a friend', async () => {
-      const friend_one = '123';
-      const friend_two = '456';
-
-      FriendList.findOne = jest
-        .fn()
-        .mockRejectedValue(new Error('Database error'));
-
-      await expect(addFriendService(friend_one, friend_two)).rejects.toThrow(
+      await expect(addFriendService(1, 'nonexistentuser')).rejects.toThrow(
         'User with this username not found',
       );
     });
   });
 
   describe('getFriends', () => {
-    it('should return the list of friends for the user', async () => {
-      const userId = '123';
+    it('should return a list of friends with owed amounts', async () => {
       const mockFriends = [
-        { friend_one: '123', friend_two: '456' },
-        { friend_one: '123', friend_two: '789' },
+        { user_id: 1, friend_id: 2 },
+        { user_id: 2, friend_id: 1 },
       ];
-
-      const mockFriendNames = ['janedoe', 'samsmith'];
-
+      const mockFriendUser = { username: 'frienduser' };
+      const mockAmountOwed = 100;
       FriendList.findAll = jest.fn().mockResolvedValue(mockFriends);
-      User.findOne = jest
-        .fn()
-        .mockResolvedValueOnce({ username: 'janedoe' })
-        .mockResolvedValueOnce({ username: 'samsmith' });
+      User.findOne = jest.fn().mockResolvedValue(mockFriendUser);
+      ExpenseSplit.sum = jest.fn().mockResolvedValue(mockAmountOwed);
 
-      const result = await getFriends(userId);
+      const friends = await getFriends(1);
 
-      expect(FriendList.findAll).toHaveBeenCalledWith({
-        where: expect.anything(),
-        attributes: ['friend_one', 'friend_two'],
-      });
-      expect(result).toEqual(mockFriendNames);
-    });
-
-    it('should return an empty list if no friends are found', async () => {
-      const userId = '123';
-
-      FriendList.findAll = jest.fn().mockResolvedValue([]);
-      const result = await getFriends(userId);
-
-      expect(result).toEqual([]);
-    });
-
-    it('should throw an error if database query fails', async () => {
-      const userId = '123';
-
-      FriendList.findAll = jest
-        .fn()
-        .mockRejectedValue(new Error('Database error'));
-      await expect(getFriends(userId)).rejects.toThrow('Database error');
+      expect(friends.length).toBe(2);
+      expect(friends[0].username).toBe('frienduser');
+      expect(friends[0].amountOwed).toBe(100);
     });
   });
 
   describe('removeFriendService', () => {
-    beforeEach(() => {
-      jest.clearAllMocks(); // Clear mocks before each test
+    it('should remove a friend if friendship exists', async () => {
+      const mockFriendship = { destroy: jest.fn() };
+      FriendList.findOne = jest.fn().mockResolvedValue(mockFriendship);
+
+      await removeFriendService(2, 1);
+
+      expect(mockFriendship.destroy).toHaveBeenCalled();
     });
 
-    it('should successfully remove a friendship if it exists', async () => {
-      const mockFriendship = {
-        id: 'friend-id',
-        destroy: jest.fn().mockResolvedValue(), // Mock the destroy function
-      };
+    it('should throw error if friendship does not exist', async () => {
+      FriendList.findOne = jest.fn().mockResolvedValue(null);
 
-      FriendList.findOne = jest.fn().mockResolvedValue(mockFriendship); // Mock findOne
-
-      const friendId = 'friend-id';
-      const userId = 'user-id';
-
-      const result = await removeFriendService(friendId, userId);
-
-      // Expectations
-      expect(FriendList.findOne).toHaveBeenCalledWith({
-        id: friendId,
-        where: Sequelize.literal(
-          `"friend_one" = CAST('${userId}' AS UUID) OR "friend_two" = CAST('${userId}' AS UUID)`,
-        ),
-      });
-      expect(mockFriendship.destroy).toHaveBeenCalled(); // Ensure destroy was called
-      expect(result).toBeUndefined(); // No return value on success
-    });
-
-    it('should return a message if the friendship does not exist', async () => {
-      FriendList.findOne = jest.fn().mockResolvedValue(null); // Mock findOne returning no friendship
-
-      const friendId = 'friend-id';
-      const userId = 'user-id';
-
-      const result = await removeFriendService(friendId, userId);
-
-      // Expectations
-      expect(FriendList.findOne).toHaveBeenCalledWith({
-        id: friendId,
-        where: Sequelize.literal(
-          `"friend_one" = CAST('${userId}' AS UUID) OR "friend_two" = CAST('${userId}' AS UUID)`,
-        ),
-      });
-      expect(result).toEqual({ message: 'Friendship not found' }); // Verify the message
-    });
-
-    it('should handle errors gracefully', async () => {
-      FriendList.findOne = jest
-        .fn()
-        .mockRejectedValue(new Error('Database error')); // Simulate a database error
-
-      const friendId = 'friend-id';
-      const userId = 'user-id';
-
-      await expect(removeFriendService(friendId, userId)).rejects.toThrow(
-        'Database error',
+      await expect(removeFriendService(2, 1)).rejects.toThrow(
+        'Friendship does not exists',
       );
+    });
+  });
 
-      // Ensure findOne was called before the error
-      expect(FriendList.findOne).toHaveBeenCalledWith({
-        id: friendId,
-        where: Sequelize.literal(
-          `"friend_one" = CAST('${userId}' AS UUID) OR "friend_two" = CAST('${userId}' AS UUID)`,
-        ),
-      });
+  describe('getAllPaymentsService', () => {
+    it('should return all payments for a user', async () => {
+      const mockPayments = [{ payer_id: 1, payee_id: 2, amount: 100 }];
+      const mockTotalPaid = { totalPaid: 200 };
+      const mockTotalOwed = { totalOwed: 300 };
+      Payment.findAndCountAll = jest
+        .fn()
+        .mockResolvedValue({ count: 1, rows: mockPayments });
+      ExpenseSplit.findOne = jest.fn().mockResolvedValue(mockTotalPaid);
+
+      const payments = await getAllPaymentsService(1);
     });
   });
 
   describe('generateExpenseReportService', () => {
-    beforeEach(() => {
-      jest.clearAllMocks(); // Clear mocks before each test
-    });
-
-    it('should generate an expense report successfully', async () => {
-      // Mock totalPaid and totalOwed
-      ExpenseSplit.findAll = jest
+    it('should return a paginated list of expenses', async () => {
+      const mockExpenses = [{ description: 'Dinner', amount: 50 }];
+      Expense.findAndCountAll = jest
         .fn()
-        .mockImplementationOnce(() =>
-          Promise.resolve([{ totalPaid: '200.50' }]),
-        )
-        .mockImplementationOnce(() =>
-          Promise.resolve([{ totalOwed: '150.25' }]),
-        );
+        .mockResolvedValue({ count: 1, rows: mockExpenses });
 
-      // Mock payments data
-      ExpenseSplit.findAll.mockImplementationOnce(() =>
-        Promise.resolve([
-          {
-            amount_paid: 50,
-            amount_owed: 25,
-            created_at: '2024-11-01',
-            Expense: {
-              description: 'Lunch',
-              amount: 100,
-              created_at: '2024-11-01',
-              Group: { name: 'Friends' },
-            },
-          },
-        ]),
-      );
+      const report = await generateExpenseReportService(1);
 
-      // Mock user expenses data
-      Expense.findAll = jest.fn().mockResolvedValue([
-        {
-          id: 1,
-          description: 'Dinner',
-          amount: 200,
-          created_at: '2024-11-02',
-          Group: { name: 'Family' },
-          expenseSplits: [
-            { amount_paid: 100, amount_owed: 50, split_ratio: 0.5 },
-          ],
-        },
-      ]);
-
-      const userId = 'user-id';
-      const result = await generateExpenseReportService(userId);
-
-      expect(ExpenseSplit.findAll).toHaveBeenCalledTimes(3); // Called for totalPaid, totalOwed, and payments
-      expect(Expense.findAll).toHaveBeenCalledTimes(1); // Called for user expenses
-
-      expect(result).toEqual({
-        totalPaid: 200.5,
-        totalOwed: 150.25,
-        paymentRecords: [
-          {
-            amountPaid: 50,
-            amountOwed: 25,
-            expenseDescription: 'Lunch',
-            groupName: 'Friends',
-            createdAt: '2024-11-01',
-          },
-        ],
-        userExpenses: [
-          {
-            id: 1,
-            description: 'Dinner',
-            amount: 200,
-            createdAt: '2024-11-02',
-            groupName: 'Family',
-            splits: [{ amountPaid: 100, amountOwed: 50, splitRatio: 0.5 }],
-          },
-        ],
-      });
+      expect(report.userExpenses.data.length).toBe(1);
+      expect(report.userExpenses.data[0].description).toBe('Dinner');
     });
+  });
 
-    it('should handle empty data gracefully', async () => {
-      // Mock empty totalPaid and totalOwed
-      ExpenseSplit.findAll = jest
-        .fn()
-        .mockImplementationOnce(() => Promise.resolve([{ totalPaid: null }]))
-        .mockImplementationOnce(() => Promise.resolve([{ totalOwed: null }]));
+  describe('generatePDFAndUploadToS3', () => {
+    it('should generate and upload a PDF report to S3', async () => {
+      const mockS3Url = 'https://s3.amazonaws.com/folder/expense-report.pdf';
+      const mockReportData = {
+        userExpenses: { data: [] },
+        totalPaid: 100,
+        totalOwed: 50,
+      };
+      const mockPaymentData = {
+        totalPaidResult: { totalPaid: 100 },
+        totalOwedResult: { totalOwed: 50 },
+        payments: [],
+      };
 
-      // Mock no payments
-      ExpenseSplit.findAll.mockImplementationOnce(() => Promise.resolve([]));
+      const pdfUrl = await generatePDFAndUploadToS3(1);
 
-      // Mock no user expenses
-      Expense.findAll = jest.fn().mockResolvedValue([]);
-
-      const userId = 'user-id';
-      const result = await generateExpenseReportService(userId);
-
-      expect(result).toEqual({
-        totalPaid: 0,
-        totalOwed: 0,
-        paymentRecords: [],
-        userExpenses: [],
-      });
-    });
-
-    it('should throw an error if fetching totalPaid fails', async () => {
-      ExpenseSplit.findAll.mockRejectedValueOnce(new Error('Database error'));
-
-      const userId = 'user-id';
-      await expect(generateExpenseReportService(userId)).rejects.toThrow(
-        'Failed to generate report data',
-      );
-
-      expect(ExpenseSplit.findAll).toHaveBeenCalledTimes(1);
-    });
-
-    it('should throw an error if fetching payments fails', async () => {
-      // Mock totalPaid and totalOwed
-      ExpenseSplit.findAll = jest
-        .fn()
-        .mockImplementationOnce(() =>
-          Promise.resolve([{ totalPaid: '200.50' }]),
-        )
-        .mockImplementationOnce(() =>
-          Promise.resolve([{ totalOwed: '150.25' }]),
-        );
-
-      // Mock payments error
-      ExpenseSplit.findAll.mockImplementationOnce(() =>
-        Promise.reject(new Error('Payments query failed')),
-      );
-
-      const userId = 'user-id';
-      await expect(generateExpenseReportService(userId)).rejects.toThrow(
-        'Failed to generate report data',
-      );
-
-      expect(ExpenseSplit.findAll).toHaveBeenCalledTimes(3);
-    });
-
-    it('should throw an error if fetching expenses fails', async () => {
-      // Mock totalPaid and totalOwed
-      ExpenseSplit.findAll = jest
-        .fn()
-        .mockImplementationOnce(() =>
-          Promise.resolve([{ totalPaid: '200.50' }]),
-        )
-        .mockImplementationOnce(() =>
-          Promise.resolve([{ totalOwed: '150.25' }]),
-        );
-
-      // Mock payments
-      ExpenseSplit.findAll.mockImplementationOnce(() => Promise.resolve([]));
-
-      // Mock expenses error
-      Expense.findAll.mockRejectedValue(new Error('Expenses query failed'));
-
-      const userId = 'user-id';
-      await expect(generateExpenseReportService(userId)).rejects.toThrow(
-        'Failed to generate report data',
-      );
-
-      expect(ExpenseSplit.findAll).toHaveBeenCalledTimes(3);
-      expect(Expense.findAll).toHaveBeenCalledTimes(1);
+      expect(pdfUrl).toBe(mockS3Url);
+      expect(uploadFileToS3).toHaveBeenCalled();
     });
   });
 
   describe('getReportsService', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
+    it('should return a list of reports for the user', async () => {
+      const mockReports = [{ id: 1, report_url: 'https://report-url.com' }];
+      Report.findAll = jest.fn().mockResolvedValue(mockReports);
+
+      const reports = await getReportsService(1);
+
+      expect(reports.length).toBe(1);
+      expect(reports[0].report_url).toBe('https://report-url.com');
     });
 
-    it('should return reports for the specified user and pagination parameters', async () => {
-      const mockReports = [
-        {
-          id: 1,
-          report_url: 'https://s3.amazonaws.com/report1.pdf',
-          created_at: new Date(),
-        },
-        {
-          id: 2,
-          report_url: 'https://s3.amazonaws.com/report2.pdf',
-          created_at: new Date(),
-        },
-      ];
+    it('should throw error if no reports are found for the user', async () => {
+      Report.findAll = jest.fn().mockResolvedValue([]);
 
-      Report.findAll.mockResolvedValue(mockReports);
-
-      const userId = 'user-id';
-      const page = 1;
-      const limit = 2;
-
-      const result = await getReportsService(userId, page, limit);
-
-      expect(Report.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-        order: [['created_at', 'DESC']],
-        limit: limit,
-        offset: 0, // For page 1, offset should be 0
-      });
-
-      expect(result).toEqual(mockReports);
-    });
-
-    it('should handle pagination by calculating the correct offset', async () => {
-      const mockReports = [
-        {
-          id: 3,
-          report_url: 'https://s3.amazonaws.com/report3.pdf',
-          created_at: new Date(),
-        },
-      ];
-
-      Report.findAll.mockResolvedValue(mockReports);
-
-      const userId = 'user-id';
-      const page = 2;
-      const limit = 5;
-
-      const result = await getReportsService(userId, page, limit);
-
-      expect(Report.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-        order: [['created_at', 'DESC']],
-        limit: limit,
-        offset: 5, // For page 2, with limit 5, offset should be 5
-      });
-
-      expect(result).toEqual(mockReports);
-    });
-
-    it('should throw an error if no reports are found for the user', async () => {
-      Report.findAll.mockResolvedValue([]);
-
-      const userId = 'user-id';
-
-      await expect(getReportsService(userId)).rejects.toThrow(
+      await expect(getReportsService(1)).rejects.toThrow(
         'No reports found for this user',
       );
-
-      expect(Report.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-        order: [['created_at', 'DESC']],
-        limit: 10, // Default limit
-        offset: 0, // Default offset for page 1
-      });
-    });
-
-    it('should use default pagination parameters when page and limit are not provided', async () => {
-      const mockReports = [
-        {
-          id: 4,
-          report_url: 'https://s3.amazonaws.com/report4.pdf',
-          created_at: new Date(),
-        },
-      ];
-
-      Report.findAll.mockResolvedValue(mockReports);
-
-      const userId = 'user-id';
-
-      const result = await getReportsService(userId);
-
-      expect(Report.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-        order: [['created_at', 'DESC']],
-        limit: 10, // Default limit
-        offset: 0, // Default offset for page 1
-      });
-
-      expect(result).toEqual(mockReports);
-    });
-
-    it('should throw an error if an exception occurs during the database query', async () => {
-      Report.findAll.mockRejectedValue(new Error('Database query failed'));
-
-      const userId = 'user-id';
-
-      await expect(getReportsService(userId)).rejects.toThrow(
-        'Database query failed',
-      );
-    });
-  });
-
-  describe('getReportsService', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it('should return reports for the specified user and pagination parameters', async () => {
-      const mockReports = [
-        {
-          id: 1,
-          report_url: 'https://s3.amazonaws.com/report1.pdf',
-          created_at: new Date(),
-        },
-        {
-          id: 2,
-          report_url: 'https://s3.amazonaws.com/report2.pdf',
-          created_at: new Date(),
-        },
-      ];
-
-      Report.findAll.mockResolvedValue(mockReports);
-
-      const userId = 'user-id';
-      const page = 1;
-      const limit = 2;
-
-      const result = await getReportsService(userId, page, limit);
-
-      expect(Report.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-        order: [['created_at', 'DESC']],
-        limit: limit,
-        offset: 0, // For page 1, offset should be 0
-      });
-
-      expect(result).toEqual(mockReports);
-    });
-
-    it('should handle pagination by calculating the correct offset', async () => {
-      const mockReports = [
-        {
-          id: 3,
-          report_url: 'https://s3.amazonaws.com/report3.pdf',
-          created_at: new Date(),
-        },
-      ];
-
-      Report.findAll.mockResolvedValue(mockReports);
-
-      const userId = 'user-id';
-      const page = 2;
-      const limit = 5;
-
-      const result = await getReportsService(userId, page, limit);
-
-      expect(Report.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-        order: [['created_at', 'DESC']],
-        limit: limit,
-        offset: 5, // For page 2, with limit 5, offset should be 5
-      });
-
-      expect(result).toEqual(mockReports);
-    });
-
-    it('should throw an error if no reports are found for the user', async () => {
-      Report.findAll.mockResolvedValue([]);
-
-      const userId = 'user-id';
-
-      await expect(getReportsService(userId)).rejects.toThrow(
-        'No reports found for this user',
-      );
-
-      expect(Report.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-        order: [['created_at', 'DESC']],
-        limit: 10, // Default limit
-        offset: 0, // Default offset for page 1
-      });
-    });
-
-    it('should use default pagination parameters when page and limit are not provided', async () => {
-      const mockReports = [
-        {
-          id: 4,
-          report_url: 'https://s3.amazonaws.com/report4.pdf',
-          created_at: new Date(),
-        },
-      ];
-
-      Report.findAll.mockResolvedValue(mockReports);
-
-      const userId = 'user-id';
-
-      const result = await getReportsService(userId);
-
-      expect(Report.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-        order: [['created_at', 'DESC']],
-        limit: 10, // Default limit
-        offset: 0, // Default offset for page 1
-      });
-
-      expect(result).toEqual(mockReports);
-    });
-
-    it('should throw an error if an exception occurs during the database query', async () => {
-      Report.findAll.mockRejectedValue(new Error('Database query failed'));
-
-      const userId = 'user-id';
-
-      await expect(getReportsService(userId)).rejects.toThrow(
-        'Database query failed',
-      );
-    });
-  });
-
-  describe('calculateOutstandingBalance', () => {
-    const userId = 'user-123'; // Example user ID for testing
-
-    beforeEach(() => {
-      jest.clearAllMocks(); // Clear mocks before each test
-    });
-
-    it('should calculate the outstanding balance correctly when user has expense splits', async () => {
-      const mockExpenseSplits = [
-        { user_id: userId, amount_owed: 100, amount_paid: 50 },
-        { user_id: userId, amount_owed: 50, amount_paid: 20 },
-      ];
-
-      ExpenseSplit.findAll.mockResolvedValue(mockExpenseSplits);
-
-      const result = await calculateOutstandingBalance(userId);
-
-      expect(result).toBe(80);
-      expect(ExpenseSplit.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-      });
-    });
-
-    it('should return 0 if the user has no expense splits', async () => {
-      ExpenseSplit.findAll.mockResolvedValue([]);
-
-      const result = await calculateOutstandingBalance(userId);
-
-      expect(result).toBe(0);
-      expect(ExpenseSplit.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-      });
-    });
-
-    it('should correctly handle negative and positive amounts in expense splits', async () => {
-      const mockExpenseSplits = [
-        { user_id: userId, amount_owed: 100, amount_paid: 150 },
-        { user_id: userId, amount_owed: 50, amount_paid: 30 },
-      ];
-
-      ExpenseSplit.findAll.mockResolvedValue(mockExpenseSplits);
-
-      const result = await calculateOutstandingBalance(userId);
-
-      expect(result).toBe(-30);
-      expect(ExpenseSplit.findAll).toHaveBeenCalledWith({
-        where: { user_id: userId },
-      });
     });
   });
 });

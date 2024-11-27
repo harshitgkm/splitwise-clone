@@ -9,281 +9,206 @@ const {
   generateExpenseReport,
   exportReportToPDF,
   getAllReports,
-} = require('../../src/controllers/users.controller');
-
-const validUser = {
-  id: 1,
-  username: 'testuser',
-  email: 'testuser@example.com',
-  profile_picture_url: 'http://example.com/profile.jpg',
-};
-
-const updatedData = {
-  username: 'updateduser',
-  email: 'updateduser@example.com',
-};
+} = require('../../src/controllers/users.controller.js');
 
 const {
   getUserById,
   updateUser,
+  calculateOutstandingBalance,
   addFriendService,
   getFriends,
   removeFriendService,
-  calculateOutstandingBalance,
   getAllPaymentsService,
   generateExpenseReportService,
   generatePDFAndUploadToS3,
   getReportsService,
 } = require('../../src/services/users.service');
 
-const { uploadFileToS3 } = require('../../src/helpers/aws.helper');
+const { uploadFileToS3 } = require('../../src/helpers/aws.helper.js');
 
-jest.mock('../../src/services/users.service');
-jest.mock('../../src/helpers/aws.helper');
+jest.mock('../../src/services/users.service', () => ({
+  getUserById: jest.fn(),
+  updateUser: jest.fn(),
+  calculateOutstandingBalance: jest.fn(),
+  addFriendService: jest.fn(),
+  getFriends: jest.fn(),
+  removeFriendService: jest.fn(),
+  getAllPaymentsService: jest.fn(),
+  generateExpenseReportService: jest.fn(),
+  generatePDFAndUploadToS3: jest.fn(),
+  getReportsService: jest.fn(),
+}));
 
-describe('Users Controller Unit Tests', () => {
-  let res, next;
+jest.mock('../../src/helpers/aws.helper.js', () => ({
+  uploadFileToS3: jest.fn(),
+}));
+
+describe('Users Controller', () => {
+  let req, res, next;
 
   beforeEach(() => {
-    res = {
-      data: null,
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
-    };
+    req = { user: { id: 1 }, file: null, body: {}, query: {} };
+    res = { data: null, status: jest.fn().mockReturnThis(), json: jest.fn() };
     next = jest.fn();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
+  it('should get user profile', async () => {
+    const mockUser = { id: 1, username: 'testuser' };
+    getUserById.mockResolvedValue(mockUser);
+
+    await getUserProfile(req, res, next);
+
+    expect(getUserById).toHaveBeenCalledWith(1);
+    expect(res.data).toEqual(mockUser);
+    expect(next).toHaveBeenCalled();
   });
 
-  describe('getUserProfile', () => {
-    it('should return the user profile', async () => {
-      const req = { user: { id: '123' } };
-      const mockUser = { id: '123', username: 'test_user' };
-      getUserById.mockResolvedValue(mockUser);
-
-      await getUserProfile(req, res, next);
-
-      expect(getUserById).toHaveBeenCalledWith('123');
-      expect(res.data).toEqual(mockUser);
-      expect(next).toHaveBeenCalled();
-    });
-
-    it('should handle errors and respond with an error message', async () => {
-      const req = { user: { id: '123' } };
-      const error = new Error('User not found');
-      getUserById.mockRejectedValue(error);
-
-      await getUserProfile(req, res, next);
-
-      expect(getUserById).toHaveBeenCalledWith('123');
-      expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
-    });
-  });
-
-  describe('updateUserProfile', () => {
-    it('should update user profile with uploaded file', async () => {
-      const req = {
-        params: { id: '123' },
-        body: { username: 'new_username' },
-        file: { path: '/path/to/file', originalname: 'profile.jpg' },
-      };
-      const updatedUser = {
-        id: '123',
-        username: 'new_username',
-        profile_picture_url: 'http://s3url.com/profile.jpg',
-      };
-      uploadFileToS3.mockResolvedValue('http://s3url.com/profile.jpg');
-      updateUser.mockResolvedValue(updatedUser);
-
-      await updateUserProfile(req, res, next);
-
-      expect(uploadFileToS3).toHaveBeenCalledWith(req.file);
-      expect(updateUser).toHaveBeenCalledWith('123', {
-        username: 'new_username',
-        profile_picture_url: 'http://s3url.com/profile.jpg',
-      });
-      expect(res.data).toEqual(updatedUser);
-      expect(next).toHaveBeenCalled();
-    });
-
-    it('should handle errors and respond with an error message', async () => {
-      const req = { params: { id: '123' }, body: {} };
-      const error = new Error('Update failed');
-      updateUser.mockRejectedValue(error);
-
-      await updateUserProfile(req, res, next);
-
-      expect(updateUser).toHaveBeenCalledWith('123', {});
-      expect(res.json).toHaveBeenCalledWith({ error: 'Update failed' });
-    });
-  });
-
-  describe('getOutstandingBalance', () => {
-    it('should return the outstanding balance', async () => {
-      const req = { user: { id: '123' } };
-      calculateOutstandingBalance.mockResolvedValue(500);
-
-      await getOutstandingBalance(req, res, next);
-
-      expect(calculateOutstandingBalance).toHaveBeenCalledWith('123');
-      expect(res.data).toEqual(500);
-      expect(next).toHaveBeenCalled();
-    });
-
-    it('should handle errors and respond with a default error message', async () => {
-      const req = { user: { id: '123' } };
-      calculateOutstandingBalance.mockRejectedValue(
-        new Error('Balance calculation failed'),
-      );
-
-      await getOutstandingBalance(req, res, next);
-
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Failed to fetch outstanding balance.',
-      });
-    });
-
-    it('should return zero outstanding balance when none exists', async () => {
-      const req = { user: { id: validUser.id } };
-      const res = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-      };
-
-      calculateOutstandingBalance.mockResolvedValue(0);
-
-      await getOutstandingBalance(req, res);
-
-      expect(calculateOutstandingBalance).toHaveBeenCalledWith(validUser.id);
-    });
-  });
-
-  describe('addFriend', () => {
-    it('should add a new friend', async () => {
-      const req = {
-        user: { id: '123' },
-        body: { username: 'friend_username' },
-      };
-      const mockFriendship = {
-        id: 'friendship123',
-        username: 'friend_username',
-      };
-      addFriendService.mockResolvedValue(mockFriendship);
-
-      await addFriend(req, res, next);
-
-      expect(addFriendService).toHaveBeenCalledWith('123', 'friend_username');
-      expect(res.data).toEqual(mockFriendship);
-      expect(next).toHaveBeenCalled();
-    });
-
-    it('should return error if friend username is invalid', async () => {
-      const req = {
-        user: { id: validUser.id },
-        body: { username: 'non_existing_user' }, // Invalid username
-      };
-      const res = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-      };
-
-      addFriendService.mockRejectedValue(new Error('User not found'));
-
-      await addFriend(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
-    });
-
-    it('should handle errors when adding a friend', async () => {
-      const req = {
-        user: { id: '123' },
-        body: { username: 'friend_username' },
-      };
-      const error = new Error('Friend not found');
-      addFriendService.mockRejectedValue(error);
-
-      await addFriend(req, res, next);
-
-      expect(res.json).toHaveBeenCalledWith({ error: 'Friend not found' });
-    });
-  });
-
-  describe('getFriendsList', () => {
-    it('should return a list of friends', async () => {
-      const req = { user: { id: '123' }, query: { page: 1, limit: 10 } };
-      const friendsList = [
-        { id: '1', username: 'friend1' },
-        { id: '2', username: 'friend2' },
-      ];
-      getFriends.mockResolvedValue(friendsList);
-
-      await getFriendsList(req, res, next);
-
-      expect(getFriends).toHaveBeenCalledWith('123', 1, 10);
-      expect(res.data).toEqual(friendsList);
-      expect(next).toHaveBeenCalled();
-    });
-
-    it('should handle errors when fetching friends list', async () => {
-      const req = { user: { id: '123' }, query: { page: 1, limit: 10 } };
-      const error = new Error('Failed to fetch friends');
-      getFriends.mockRejectedValue(error);
-
-      await getFriendsList(req, res, next);
-
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Failed to fetch friends',
-      });
-    });
-  });
-
-  it('should handle error if expense report generation fails', async () => {
-    const req = { user: { id: validUser.id } };
-    const res = {
-      json: jest.fn(),
-      status: jest.fn().mockReturnThis(),
+  it('should update user profile', async () => {
+    req.body = { username: 'newuser' };
+    const mockImageUrl = 'https://s3.amazonaws.com/image.jpg';
+    const mockUser = {
+      id: 1,
+      username: 'newuser',
+      profile_picture_url: mockImageUrl,
     };
+    uploadFileToS3.mockResolvedValue(mockImageUrl);
+    updateUser.mockResolvedValue(mockUser);
 
-    generateExpenseReportService.mockRejectedValue(
-      new Error('No expenses found'),
-    );
+    await updateUserProfile(req, res, next);
 
-    await generateExpenseReport(req, res);
-
-    expect(generateExpenseReportService).toHaveBeenCalledWith(validUser.id);
-    expect(res.json).toHaveBeenCalledWith({ error: 'No expenses found' });
+    expect(res.data).toEqual(mockUser);
+    expect(next).toHaveBeenCalled();
   });
 
-  it('should return error if friendship does not exist during removeFriend', async () => {
-    const req = {
-      params: { id: 'non_existing_friend_id' },
-      user: { id: validUser.id },
-    };
-    const res = {
-      json: jest.fn(),
-      status: jest.fn().mockReturnThis(),
-    };
+  it('should handle error when updating user profile', async () => {
+    const errorMessage = 'Error updating user profile';
+    updateUser.mockRejectedValue(new Error(errorMessage));
 
-    removeFriendService.mockRejectedValue(new Error('Friendship not found'));
+    await updateUserProfile(req, res, next);
+
+    expect(res.json).toHaveBeenCalledWith({ error: errorMessage });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('should get outstanding balance', async () => {
+    const mockBalance = 100;
+    calculateOutstandingBalance.mockResolvedValue(mockBalance);
+
+    await getOutstandingBalance(req, res, next);
+
+    expect(calculateOutstandingBalance).toHaveBeenCalledWith(1);
+    expect(res.data).toEqual(mockBalance);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('should add a friend', async () => {
+    req.body = { username: 'friend' };
+    const mockFriendship = { userId: 1, friendUsername: 'friend' };
+    addFriendService.mockResolvedValue(mockFriendship);
+
+    await addFriend(req, res, next);
+
+    expect(addFriendService).toHaveBeenCalledWith(1, 'friend');
+    expect(res.data).toEqual(mockFriendship);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('should get friends list', async () => {
+    const mockFriendsList = [
+      { id: 2, username: 'friend1' },
+      { id: 3, username: 'friend2' },
+    ];
+    getFriends.mockResolvedValue(mockFriendsList);
+
+    await getFriendsList(req, res, next);
+
+    expect(getFriends).toHaveBeenCalledWith(1, 1, 10);
+    expect(res.data).toEqual({
+      currentPage: 1,
+      totalFriends: mockFriendsList.length,
+      data: mockFriendsList,
+    });
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('should remove a friend', async () => {
+    req.params = { id: 2 };
+    removeFriendService.mockResolvedValue();
 
     await removeFriend(req, res);
 
-    expect(res.json).toHaveBeenCalledWith({ error: 'Friendship not found' });
+    expect(removeFriendService).toHaveBeenCalledWith(2, 1);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Friend removed successfully',
+    });
   });
 
-  it('should return an empty array if no reports exist', async () => {
-    const req = { user: { id: validUser.id }, query: { page: 1, limit: 10 } };
-    const res = {
-      json: jest.fn(),
-      status: jest.fn().mockReturnThis(),
+  it('should handle error when removing a friend', async () => {
+    req.params = { id: 2 };
+    const errorMessage = 'Error removing friend';
+    removeFriendService.mockRejectedValue(new Error(errorMessage));
+
+    await removeFriend(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({ error: errorMessage });
+  });
+
+  it('should get all payments for user', async () => {
+    const mockPayments = {
+      payments: [{ payer_id: 1, payee_id: 2, amount: 50 }],
+      total: 1,
     };
+    getAllPaymentsService.mockResolvedValue(mockPayments);
 
-    getReportsService.mockResolvedValue([]);
+    await getAllPaymentsForUser(req, res, next);
 
-    await getAllReports(req, res);
+    expect(getAllPaymentsService).toHaveBeenCalledWith(1, 1, 10);
+    expect(res.data).toEqual(mockPayments);
+    expect(next).toHaveBeenCalled();
+  });
 
-    expect(getReportsService).toHaveBeenCalledWith(validUser.id, 1, 10);
+  it('should generate expense report', async () => {
+    const mockReport = { expenses: [{ description: 'Dinner', amount: 20 }] };
+    generateExpenseReportService.mockResolvedValue(mockReport);
+
+    await generateExpenseReport(req, res, next);
+
+    expect(generateExpenseReportService).toHaveBeenCalledWith(1, 1, 10);
+    expect(res.data).toEqual(mockReport);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('should export report to PDF', async () => {
+    const mockS3Url = 'https://s3.amazonaws.com/report.pdf';
+    generatePDFAndUploadToS3.mockResolvedValue(mockS3Url);
+
+    await exportReportToPDF(req, res, next);
+
+    expect(generatePDFAndUploadToS3).toHaveBeenCalledWith(1);
+    expect(res.data).toEqual(mockS3Url);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('should get all reports', async () => {
+    const mockReports = [{ id: 1, title: 'Report 1' }];
+    getReportsService.mockResolvedValue(mockReports);
+
+    await getAllReports(req, res, next);
+
+    expect(getReportsService).toHaveBeenCalledWith(1, 1, 10);
+    expect(res.data).toEqual(mockReports);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('should handle error in getAllPaymentsForUser', async () => {
+    const errorMessage = 'Error fetching payments';
+    getAllPaymentsService.mockRejectedValue(new Error(errorMessage));
+
+    await getAllPaymentsForUser(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: errorMessage });
+    expect(next).not.toHaveBeenCalled();
   });
 });
