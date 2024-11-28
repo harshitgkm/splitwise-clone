@@ -11,7 +11,6 @@ const {
   leaveGroup,
   removeUser,
   sendGroupInvite,
-  acceptInvite,
 } = require('../controllers/groups.controller.js');
 
 const { verifyToken } = require('../middlewares/auth.middleware.js');
@@ -72,7 +71,7 @@ router.post(
   addMemberToGroupSerializer,
 );
 
-router.post('/:id/leave', verifyToken, leaveGroup, leaveGroupSerializer);
+router.delete('/:id/leave', verifyToken, leaveGroup, leaveGroupSerializer);
 
 router.get(
   '/:id/members',

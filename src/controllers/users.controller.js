@@ -121,7 +121,7 @@ const getAllPaymentsForUser = async (req, res, next) => {
     next();
   } catch (err) {
     console.error('Error in getAllPaymentsForUser:', err);
-    res.status(500).json({ error: err.message });
+    res.json({ error: err.message });
   }
 };
 
