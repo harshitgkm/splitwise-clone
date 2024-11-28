@@ -38,8 +38,8 @@ const {
 
 router.post(
   '/',
-  createExpenseValidator,
   verifyToken,
+  createExpenseValidator,
   createExpense,
   expenseSerializer,
 );
