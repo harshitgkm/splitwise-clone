@@ -50,7 +50,7 @@ const updateGroupSerializer = (req, res) => {
 };
 
 const deleteGroupSerializer = (req, res) => {
-  res.status(200).json({
+  res.status(204).json({
     message: 'Group deleted successfully',
   });
 };
@@ -75,13 +75,13 @@ const addMemberToGroupSerializer = (req, res) => {
 };
 
 const leaveGroupSerializer = (req, res) => {
-  res.status(200).json({
+  res.status(204).json({
     message: 'You have left the group',
   });
 };
 
 const removeUserSerializer = (req, res) => {
-  res.status(200).json({
+  res.status(204).json({
     message: 'User removed from the group',
   });
 };
