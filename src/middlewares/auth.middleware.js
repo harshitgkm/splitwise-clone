@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 require('dotenv').config();
 const { redisClient } = require('../config/redis.js');
+const rateLimit = require('express-rate-limit');
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -31,6 +32,16 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+const loginRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // in ms
+  max: 5,
+  message:
+    'Too many login attempts from this IP, please try again after 15 minutes.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the X-RateLimit-* headers
+});
+
 module.exports = {
   verifyToken,
+  loginRateLimiter,
 };
