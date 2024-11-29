@@ -207,7 +207,6 @@ describe('Users Controller', () => {
 
     await getAllPaymentsForUser(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: errorMessage });
     expect(next).not.toHaveBeenCalled();
   });

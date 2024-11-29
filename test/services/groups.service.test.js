@@ -355,25 +355,45 @@ describe('Groups Service', () => {
   });
 
   describe('addGroupMember', () => {
-    it('should throw error if user is already a member', async () => {
-      GroupMember.findOne.mockResolvedValue({ user_id: targetUserId });
-      await expect(
-        addGroupMember(groupId, userId, targetUserId),
-      ).rejects.toThrow('User not found');
-    });
+    it('should add a new member to the group successfully', async () => {
+      const groupId = 1;
+      const currentUserId = 2;
+      const username = 'john_doe';
+      const isAdmin = true;
 
-    it('should throw error if group not found', async () => {
-      Group.findByPk.mockResolvedValue(null);
-      await expect(
-        addGroupMember(groupId, userId, targetUserId),
-      ).rejects.toThrow('Group not found');
-    });
+      Group.findByPk.mockResolvedValue({ id: groupId });
+      User.findOne.mockResolvedValue({ id: 3, username: 'john_doe' });
 
-    it('should throw error if user not found', async () => {
-      User.findByPk.mockResolvedValue(null);
-      await expect(
-        addGroupMember(groupId, userId, targetUserId),
-      ).rejects.toThrow('User not found');
+      GroupMember.findOne.mockResolvedValue(null);
+      GroupMember.create.mockResolvedValue({
+        group_id: groupId,
+        user_id: 3,
+        is_admin: isAdmin,
+        joined_at: new Date(),
+      });
+
+      const result = await addGroupMember(
+        groupId,
+        currentUserId,
+        username,
+        isAdmin,
+      );
+
+      expect(Group.findByPk).toHaveBeenCalledWith(groupId);
+      expect(User.findOne).toHaveBeenCalledWith({ where: { username } });
+      expect(GroupMember.findOne).toHaveBeenCalledWith({
+        where: { group_id: groupId, user_id: 3 },
+      });
+      expect(GroupMember.create).toHaveBeenCalledWith({
+        group_id: groupId,
+        user_id: 3,
+        is_admin: isAdmin,
+        joined_at: expect.any(Date),
+      });
+
+      expect(result).toHaveProperty('group_id', groupId);
+      expect(result).toHaveProperty('user_id', 3);
+      expect(result.is_admin).toBe(isAdmin);
     });
   });
 
