@@ -34,4 +34,20 @@ module.exports = {
       deletedAt: 'deleted_at',
     },
   },
+  production: {
+    username: '',
+    password: '',
+    database: '',
+    host: '',
+    port: '',
+    dialect: '',
+    define: {
+      paranoid: true,
+      underscored: true,
+      timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+      deletedAt: 'deleted_at',
+    },
+  },
 };
