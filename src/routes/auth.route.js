@@ -9,7 +9,10 @@ const {
   logout,
 } = require('../controllers/auth.controller.js');
 
-const { verifyToken } = require('../middlewares/auth.middleware.js');
+const {
+  verifyToken,
+  loginRateLimiter,
+} = require('../middlewares/auth.middleware.js');
 
 const {
   validateRegister,
@@ -22,7 +25,7 @@ router.post('/request-otp', requestOtp);
 
 router.post('/verify-otp', verifyOtp);
 
-router.post('/login', validateLogin, login);
+router.post('/login', loginRateLimiter, validateLogin, login);
 
 router.delete('/logout', verifyToken, logout);
 
