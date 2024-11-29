@@ -12,7 +12,9 @@ const expenseSerializer = (req, res) => {
     };
   }
 
-  res.json({ message: 'Expense created successfully', data: resultData });
+  res
+    .status(201)
+    .json({ message: 'Expense created successfully', data: resultData });
 };
 
 const getAllExpensesSerializer = (req, res) => {

@@ -11,6 +11,11 @@ require('dotenv').config();
 const Op = require('sequelize');
 const { Sequelize } = require('sequelize');
 const { uploadFileToS3 } = require('../helpers/aws.helper.js');
+const fs = require('fs');
+const path = require('path');
+const { PassThrough } = require('stream');
+const PDFDocument = require('pdfkit');
+const { v4: uuidv4 } = require('uuid');
 
 const getUserById = async userId => {
   console.log('Fetching user by ID');
@@ -240,12 +245,6 @@ const generateExpenseReportService = async (userId, page = 1, limit = 10) => {
 const generatePDFAndUploadToS3 = async userId => {
   const reportData = await generateExpenseReportService(userId);
   const paymentData = await getAllPaymentsService(userId);
-
-  const fs = require('fs');
-  const path = require('path');
-  const { PassThrough } = require('stream');
-  const PDFDocument = require('pdfkit');
-  const { v4: uuidv4 } = require('uuid');
 
   const pdfDoc = new PDFDocument();
   const passThroughStream = new PassThrough();
