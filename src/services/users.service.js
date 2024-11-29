@@ -64,14 +64,17 @@ const addFriendService = async (user_id, friend_username) => {
   }
 
   const existingFriendship = await FriendList.findOne({
-    where: Op.or(
-      Op.literal(
-        `"user_id" = CAST('${user_id}' AS UUID) AND "friend_id" = CAST('${friend_id}' AS UUID)`,
-      ),
-      Op.literal(
-        `"user_id" = CAST('${friend_id}' AS UUID) AND "friend_id" = CAST('${user_id}' AS UUID)`,
-      ),
-    ),
+    where:
+      Op.or[
+        ({
+          user_id: { [Op.eq]: user_id },
+          friend_id: { [Op.eq]: friend_id },
+        },
+        {
+          user_id: { [Op.eq]: friend_id },
+          friend_id: { [Op.eq]: user_id },
+        })
+      ],
   });
 
   if (existingFriendship) {
@@ -93,9 +96,10 @@ const getFriends = async (userId, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
 
   const friends = await FriendList.findAll({
-    where: Sequelize.literal(
-      `"user_id" = CAST('${userId}' AS UUID) OR "friend_id" = CAST('${userId}' AS UUID)`,
-    ),
+    where:
+      Op.or[
+        ({ user_id: { [Op.eq]: userId } }, { friend_id: { [Op.eq]: userId } })
+      ],
     attributes: ['user_id', 'friend_id'],
     limit,
     offset,
@@ -151,14 +155,17 @@ const getFriends = async (userId, page = 1, limit = 10) => {
 
 const removeFriendService = async (friendId, userId) => {
   const existingFriendship = await FriendList.findOne({
-    where: Op.or(
-      Op.literal(
-        `"user_id" = CAST('${friendId}' AS UUID) AND "friend_id" = CAST('${userId}' AS UUID)`,
-      ),
-      Op.literal(
-        `"user_id" = CAST('${userId}' AS UUID) AND "friend_id" = CAST('${friendId}' AS UUID)`,
-      ),
-    ),
+    where:
+      Op.or[
+        ({
+          user_id: { [Op.eq]: userId },
+          friend_id: { [Op.eq]: friendId },
+        },
+        {
+          user_id: { [Op.eq]: friendId },
+          friend_id: { [Op.eq]: userId },
+        })
+      ],
   });
 
   if (!existingFriendship) {
@@ -187,10 +194,10 @@ const getAllPaymentsService = async (userId, page = 1, limit = 10) => {
     }),
   ]);
   const { count, rows: payments } = await Payment.findAndCountAll({
-    where: Op.or(
-      Op.literal(`"payer_id" = CAST('${userId}' AS UUID)`),
-      Op.literal(`"payee_id" = CAST('${userId}' AS UUID)`),
-    ),
+    where:
+      Op.or[
+        ({ user_id: { [Op.eq]: userId } }, { friend_id: { [Op.eq]: userId } })
+      ],
     order: [['created_at', 'DESC']],
     limit: limit,
     offset: offset,
